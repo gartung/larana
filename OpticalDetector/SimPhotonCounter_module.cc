@@ -308,11 +308,11 @@ namespace opdet {
 	      {
 
 
-		std::cout<<"was here 302================== verbosity >3 "<<std::endl;
+		std::cout<<"was here 311================== verbosity >3 "<<std::endl;
 		for(const sim::OnePhoton& Phot: TheHit)
 		  {
 
-std::cout<<"detected photons reset test ---------------------- "<<fCountOpDetDetected<<" channel "<<fOpChannel<<std::endl;
+//std::cout<<"detected photons reset test ---------------------- "<<fCountOpDetDetected<<" channel "<<fOpChannel<<std::endl;
 			allphotons1++;
 			allphotons2++;
 		    // Calculate wavelength in nm
@@ -325,7 +325,7 @@ std::cout<<"detected photons reset test ---------------------- "<<fCountOpDetDet
 		    
 		    // Increment per OpDet counters and fill per phot trees
 		fFill=false;
-std::cout<<"%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% details of QE "<<fDetailedQE<<" "<<fWavelength<<std::endl;
+//std::cout<<"%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% details of QE "<<fDetailedQE<<" "<<fWavelength<<std::endl;
 		 
 		    if(fMakeAllPhotonsTree) fThePhotonTreeAll->Fill();
 		    if((flat.fire(1.0)<=fQE)&&(fWavelength>fWavelengthCutLow)&&(fWavelength<fWavelengthCutHigh))
@@ -338,25 +338,25 @@ std::cout<<"%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% details of QE "<<fDetailedQE<<" "<<f
 			switch(fOpChannel){
 				case 0:{
 				fftest=flat.fire(1.0);
-				  std::cout<<"channel 0 "<<QEHmm->GetBinCenter(1)<<" "<<fftest<<" "<<QESipm->GetBinContent(QESipm->GetXaxis()->FindBin(Phot.Energy/0.000001))<<std::endl;
-				if(fftest>QESipm->GetBinContent(QESipm->GetXaxis()->FindBin(Phot.Energy/0.000001))) 					fFill=false;
+				//  std::cout<<"channel 0 etl"<<" energy of photon "<<Phot.Energy/0.000001<<" "<<fftest<<" "<<QESipm->GetBinContent(QESipm->GetXaxis()->FindBin(Phot.Energy/0.000001))<<std::endl;
+				if(fftest>QEEtl->GetBinContent(QEEtl->GetXaxis()->FindBin(Phot.Energy/0.000001))) 					fFill=false;
 				break;
 				}
 				case 1:{
 				fftest=flat.fire(1.0);
-			//	  std::cout<<"channel 1"<<std::endl;
-				if(fftest>QEHmm->GetBinContent(QESipm->GetXaxis()->FindBin(Phot.Energy/0.000001))) 					fFill=false;
+				 // std::cout<<"channel 1 hmm"<<" energy of photon "<<Phot.Energy/0.000001<<" "<<fftest<<" "<<QEHmm->GetBinContent(QEHmm->GetXaxis()->FindBin(Phot.Energy/0.000001))<<std::endl;
+				if(fftest>QEHmm->GetBinContent(QEHmm->GetXaxis()->FindBin(Phot.Energy/0.000001))) 					fFill=false;
 				break;
 				}
 				case 2:{
 				fftest=flat.fire(1.0);
-			//	 std::cout<<"channel 2"<<std::endl;
-				if(fftest>QEEtl->GetBinContent(QESipm->GetXaxis()->FindBin(Phot.Energy/0.000001))) 					fFill=false;
+				// std::cout<<"channel 2 sipm"<<" energy of photon "<<Phot.Energy/0.000001<<" "<<fftest<<" "<<QEEtl->GetBinContent(QEEtl->GetXaxis()->FindBin(Phot.Energy/0.000001))<<std::endl;
+				if(fftest>QESipm->GetBinContent(QESipm->GetXaxis()->FindBin(Phot.Energy/0.000001))) 					fFill=false;
 				break;
 				}
 				case 3:{
 				fftest=flat.fire(1.0);
-			//	  std::cout<<"channel 3"<<std::endl;
+				 // std::cout<<"channel 3 sipm"<<std::endl;
 				if(fftest>QESipm->GetBinContent(QESipm->GetXaxis()->FindBin(Phot.Energy/0.000001))) 					fFill=false;
 				break;
 				}
@@ -365,13 +365,76 @@ std::cout<<"%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% details of QE "<<fDetailedQE<<" "<<f
 			}
 
 		}//QE details
+
+//no qe details
+		if(fDetailedQE){
+			fFill=true;
+			switch(fOpChannel){
+				case 0:{
+				//fFill=false;
+				break;
+				}
+				case 1:{
+				//fFill=false;
+				break;
+				}
+				case 2:{
+ 				//fFill=false;
+				break;
+				}
+				case 3:{
+				//fFill=false;
+				break;
+				}
+				default:
+				std::cout<<"error"<<std::endl;
+			}
+
+		}//no QE details
 	}//QE used
 		else{
+
+		std::cout<<" QE-NOT USED "<<std::endl;
 			fFill=true;// no QE
-			std::cout<<"QE not used 357!!!"<<fUseQE<<std::endl;
+
+//no qe details
+		if(fDetailedQE){
+			fFill=true;
+			switch(fOpChannel){
+				case 0:{
+				//fFill=false;
+				std::cout<<"breaking - channel 0 "<<std::endl;
+				break;
 				}
-			if(fFill==true) fCountOpDetDetected++;
-			if(fMakeDetectedPhotonsTree&&fFill==true) fThePhotonTreeDetected->Fill();
+				case 1:{
+				//fFill=false;
+				std::cout<<"breaking - channel 1 "<<std::endl;
+				break;
+				}
+				case 2:{
+ 				//fFill=false;
+				break;
+				}
+				case 3:{
+				//fFill=false;
+				break;
+				}
+				default:
+				std::cout<<"error"<<std::endl;
+			}
+			std::cout<<"QE not used425!!!"<<fUseQE<<std::endl;
+		}//no QE details
+
+				}
+			if(fFill==true){
+
+			 fCountOpDetDetected++;
+
+				}
+			if(fMakeDetectedPhotonsTree&&fFill==true){
+				fThePhotonTreeDetected->Fill();
+				std::cout<<"filling tree l. 434 "<<fOpChannel<<std::endl;
+			}
 				
 				
 			fFill=false;
@@ -387,10 +450,10 @@ std::cout<<"%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% details of QE "<<fDetailedQE<<" "<<f
    fCountOpDetAll=0;
     fCountOpDetDetected=0;
 
-std::cout<<"was here 381================== verbosity <3 "<<std::endl;
+//std::cout<<"was here 381================== verbosity <3 "<<std::endl;
 		for(const sim::OnePhoton& Phot: TheHit)
 		  {
-			std::cout<<"detected photons reset test ---------------------- "<<fCountOpDetDetected<<" channel "<<fOpChannel<<std::endl;
+			//std::cout<<"detected photons reset test ---------------------- "<<fCountOpDetDetected<<" channel "<<fOpChannel<<std::endl;
 			allphotons1++;
 			allphotons2++;
 		    // Calculate wavelength in nm
@@ -408,31 +471,31 @@ std::cout<<"was here 381================== verbosity <3 "<<std::endl;
 		
 		if(fUseQE){
 
-		std::cout<<"QE used 394!!!"<<fUseQE<<std::endl;
+		//std::cout<<"QE used 394!!!"<<fUseQE<<std::endl;
 		if(fDetailedQE){
 			fFill=true;
 			switch(fOpChannel){
 				case 0:{
 				fftest=flat.fire(1.0);
-				std::cout<<"channel 0 "<<QEHmm->GetBinCenter(1)<<" "<<fftest<<" "<<QESipm->GetBinContent(QESipm->GetXaxis()->FindBin(Phot.Energy/0.000001))<<std::endl;
-				if(fftest>QESipm->GetBinContent(QESipm->GetXaxis()->FindBin(Phot.Energy/0.000001))) fFill=false;
+				//std::cout<<"channel 0 etl"<<QEHmm->GetBinCenter(1)<<" "<<fftest<<" "<<QESipm->GetBinContent(QESipm->GetXaxis()->FindBin(Phot.Energy/0.000001))<<std::endl;
+				if(fftest>QEEtl->GetBinContent(QESipm->GetXaxis()->FindBin(Phot.Energy/0.000001))) fFill=false;
 				break;
 				}
 				case 1:{
 				fftest=flat.fire(1.0);
-				std::cout<<"channel 1"<<std::endl;
-				if(fftest>QEHmm->GetBinContent(QESipm->GetXaxis()->FindBin(Phot.Energy/0.000001))) fFill=false;
+				//std::cout<<"channel 1 hmm"<<std::endl;
+				if(fftest>QEHmm->GetBinContent(QEHmm->GetXaxis()->FindBin(Phot.Energy/0.000001))) fFill=false;
 				break;
 				}
 				case 2:{
 				fftest=flat.fire(1.0);
-				std::cout<<"channel 2"<<std::endl;
-				if(fftest>QEEtl->GetBinContent(QESipm->GetXaxis()->FindBin(Phot.Energy/0.000001))) fFill=false;
+				//std::cout<<"channel 2 sipm"<<std::endl;
+				if(fftest>QESipm->GetBinContent(QEEtl->GetXaxis()->FindBin(Phot.Energy/0.000001))) fFill=false;
 				break;
 				}
 				case 3:{
 				fftest=flat.fire(1.0);
-				std::cout<<"channel 3"<<std::endl;
+				//std::cout<<"channel 3 sipm"<<std::endl;
 				if(fftest>QESipm->GetBinContent(QESipm->GetXaxis()->FindBin(Phot.Energy/0.000001))) fFill=false;
 				break;
 				}
@@ -445,7 +508,7 @@ std::cout<<"was here 381================== verbosity <3 "<<std::endl;
 		}//QE used
 			else{
 
-				std::cout<<"QE not used 431!!!"<<fUseQE<<std::endl;
+				std::cout<<"QE not used 509!!!"<<fUseQE<<std::endl;
 				 fFill=true;//no QE used
 
 				}
