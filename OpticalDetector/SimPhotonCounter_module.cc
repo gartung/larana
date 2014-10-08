@@ -98,7 +98,9 @@ namespace opdet {
       std::string fInputModule;      // Input tag for OpDet collection
 
       int fVerbosity;                // Level of output to write to std::out
-
+	bool fNewDetectorApproach;//to be discarded once the new way of definind detectors is established
+	int fDetectorNumber;//total number of photodetectors
+	int fDetectorTypes;//number of different types of photodets
       bool fMakeDetectedPhotonsTree; //
       bool fMakeAllPhotonsTree;      //
       bool fMakeOpDetsTree;         // Switches to turn on or off each output
@@ -106,17 +108,22 @@ namespace opdet {
 	bool fDetailedQE;         //
       bool fFill;
       bool fUseQE;
-      float fQE; 	
+      float fQE; 
+	int typedet=0;	
 	double fftest;              // Quantum efficiency of tube
       std::vector<double> fQE2H; 
+      std::vector<int> fChannelTypes;
       std::vector<double> fQE2E;
       std::vector<double> fQE2Si;    
       std::vector<double> fQEn;                   // Quantum efficiency of tube
+      std::vector<std::vector<double>> fDetEff;    
+      std::vector<std::vector<double>> fEnEff;
 	//Histrograms to store efficiency
 	TH1D *QeEnergyHist;
 	TH1D *QEHmm;
 	TH1D *QEEtl;
 	TH1D *QESipm;
+	std::vector<TH1D *> QEDets;
       float fWavelengthCutLow;       // Sensitive wavelength range 
       float fWavelengthCutHigh;      // 
 
@@ -151,15 +158,21 @@ namespace opdet {
     : EDAnalyzer(pset)
   {
     fVerbosity=                pset.get<int>("Verbosity");
+    fNewDetectorApproach=      pset.get<bool>("NewDetectorApproach",false);
+
     fInputModule=              pset.get<std::string>("InputModule");
     fMakeAllPhotonsTree=       pset.get<bool>("MakeAllPhotonsTree");
     fMakeDetectedPhotonsTree=  pset.get<bool>("MakeDetectedPhotonsTree");
     fMakeOpDetsTree=           pset.get<bool>("MakeOpDetsTree");
     fMakeOpDetEventsTree=      pset.get<bool>("MakeOpDetEventsTree");
+
     fDetailedQE=       pset.get<bool>("QuantumEfficiencyDetails");
     fUseQE=       pset.get<bool>("UsePMTEff");
     fQE=                       pset.get<double>("QuantumEfficiency");
+    //channel type map
 	if(fDetailedQE){
+
+
     fQE2H=                       pset.get< std::vector<double> >("QuantumEfficiencyVectorHmm");
     fQE2E=                       pset.get< std::vector<double> >("QuantumEfficiencyVectorEtl");
     fQE2Si=                       pset.get< std::vector<double> >("QuantumEfficiencyVectorSi"); 
@@ -182,7 +195,36 @@ namespace opdet {
 	
 	}
 
-	}
+		if(fNewDetectorApproach){
+   			fDetectorNumber=                pset.get<int>("DetectorNumber", 1);
+    			fDetectorTypes=     pset.get<int>("DetectorTypes", 1);
+    			fChannelTypes=   pset.get< std::vector<int> >("ChannelTypes");
+    			fDetEff=   pset.get< std::vector<std::vector<double>> >("QuantumEfficiencyVector");
+    			fEnEff=    pset.get< std::vector<std::vector<double>> >("QuantumEfficiencyEnergiesVector");
+				std::vector<TVectorT<double>> qen3;
+				qen3.resize(fDetectorTypes);
+
+
+				for(int j=0;j<fDetectorTypes;j++){
+					for(int jj=0;jj<int(fEnEff[j].size());jj++){
+						if(jj==0) qen3[j].ResizeTo(int(fEnEff[j].size()));
+						qen3[j][jj]=fEnEff[j][jj];
+						std::cout<<"setting energy "<<qen3[j][jj]<<std::endl;
+						}
+					}
+	
+
+
+				for(int j=0;j<fDetectorTypes;j++) {
+					QEDets.push_back(new TH1D(qen3[j]));
+					for(int ii=0;ii<int(fDetEff[j].size());ii++){
+						QEDets[j]->SetBinContent(ii,fDetEff[j][ii]);
+					}
+				}
+
+			}//new detector approach - discard the previous one and replace with this after the new way of accessing data will work
+
+	}//detailed QE
     fWavelengthCutLow=         pset.get<double>("WavelengthCutLow");
     fWavelengthCutHigh=        pset.get<double>("WavelengthCutHigh");
     // get the random number seed, use a random default if not specified    
@@ -335,6 +377,15 @@ namespace opdet {
 		std::cout<<"QE used 321!!!"<<fUseQE<<" wavelengh"<<fWavelengthCutLow<<" "<<fWavelength<<" "<<fWavelengthCutHigh<<std::endl;
 		if(fDetailedQE){
 			fFill=true;
+
+			if(fNewDetectorApproach){
+				fftest=flat.fire(1.0);
+
+				typedet=fChannelTypes[fOpChannel];
+				  std::cout<<"channel "<< fOpChannel<<" type "<<typedet<<" energy of photon "<<Phot.Energy/0.000001<<" "<<fftest<<" "<<QEDets[typedet]->GetBinContent(QEDets[typedet]->GetXaxis()->FindBin(Phot.Energy/0.000001))<<std::endl;
+				if(fftest>QEDets[typedet]->GetBinContent(QEDets[typedet]->GetXaxis()->FindBin(Phot.Energy/0.000001))) 					fFill=false;
+			}
+			else{
 			switch(fOpChannel){
 				case 0:{
 				fftest=flat.fire(1.0);
@@ -363,6 +414,7 @@ namespace opdet {
 				default:
 				std::cout<<"error"<<std::endl;
 			}
+			}//old detector approach
 
 		}//QE details
 
