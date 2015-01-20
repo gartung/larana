@@ -59,6 +59,7 @@
 #include <TTree.h>
 #include <TVectorT.h>
 #include <TAxis.h>
+#include <TSpline.h>
 
 // C++ language includes
 #include <iostream>
@@ -382,8 +383,27 @@ namespace opdet {
 				fftest=flat.fire(1.0);
 
 				typedet=fChannelTypes[fOpChannel];
-				  std::cout<<"channel "<< fOpChannel<<" type "<<typedet<<" energy of photon "<<Phot.Energy/0.000001<<" "<<fftest<<" "<<QEDets[typedet]->GetBinContent(QEDets[typedet]->GetXaxis()->FindBin(Phot.Energy/0.000001))<<std::endl;
-				if(fftest>QEDets[typedet]->GetBinContent(QEDets[typedet]->GetXaxis()->FindBin(Phot.Energy/0.000001))) 					fFill=false;
+//spline
+
+                               	std::cout<<" spline for channel "<<fOpChannel<<std::endl;
+                                TSpline5 *splineeff=new TSpline5(QEDets[typedet]);
+                                std::cout<<" spline for channel "<<fOpChannel<<" ready "<<std::endl;
+
+                                //  std::cout<<"channel "<< fOpChannel<<" type "<<typedet<<" energy of photon "<<std::endl;
+                                //if(fftest>QEDets[typedet]->GetBinContent(QEDets[typedet]->GetXaxis()->Find$
+
+                                if(fftest>splineeff->Eval(Phot.Energy/0.000001)){
+
+                                         fFill=false;
+                                        std::cout<<"not filling tree!!!!!!!!!! line394"<<std::endl;
+                                }
+                        delete splineeff;
+
+//spline
+				  //std::cout<<"cnew detector approach-channel "<< fOpChannel<<" type "<<typedet<<" energy of photon "<<Phot.Energy/0.000001<<" "<<fftest<<" "<<QEDets[typedet]->GetBinContent(QEDets[typedet]->GetXaxis()->FindBin(Phot.Energy/0.000001))<<std::endl;
+				//if(fftest>QEDets[typedet]->GetBinContent(QEDets[typedet]->GetXaxis()->FindBin(Phot.Energy/0.000001))) 					fFill=false;
+					//test of spectra
+				//std::cout<"spectrum test channel "<<ch1<<" bin "<<bin1<<" value "<<QEDets[typedet]->GetBinContent(bin1)<<std::endl;
 			}
 			else{
 			switch(fOpChannel){
