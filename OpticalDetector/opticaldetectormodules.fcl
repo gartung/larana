@@ -162,6 +162,7 @@ standard_ledcalibrationana:
 
 standard_simphotoncounter:
 {
+#efficiency data from measurements and product data
   module_type:            "SimPhotonCounter"
   Verbosity:               0 
   InputModule:            "largeant" 
