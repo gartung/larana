@@ -39,7 +39,7 @@ art_make( BASENAME_ONLY
 			MCBase
                         Geometry
                         Geometry_service
-			LArProperties_service
+#			LArProperties_service
                         PhotonVisibilityService_service
 		        OpDigiProperties_service
 		        Utilities
