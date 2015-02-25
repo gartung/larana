@@ -1,0 +1,14 @@
+
+
+BEGIN_PROLOG
+standard_genieRW:
+{
+  module_type:        "GenieReweightGenerator"
+  Weights:            ["QEMA", "CCRes", "QEVec", "NCRes"]
+  #WeightRangeSigma:   [1     , 1      , 1      , 1      ] # no longer used but might be interesting?
+  RandSeed:           65539
+  NWeights:           2
+  GenieModuleLabel:   generator
+}
+
+END_PROLOG
