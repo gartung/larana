@@ -127,7 +127,7 @@ namespace opdet {
     fOpHitModuleLabel   = pset.get<std::string>("OpHitModuleLabel");
 
 
-    art::ServiceHandle<OpDigiProperties> odp;
+    art::ServiceHandle<opdet::OpDigiProperties> odp;
     fTimeBegin  = odp->TimeBegin();
     fTimeEnd    = odp->TimeEnd();
     fSampleFreq = odp->SampleFreq();
