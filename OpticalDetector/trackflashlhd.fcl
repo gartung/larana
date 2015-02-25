@@ -77,6 +77,9 @@ outputs:
 physics.producers.trkpmtlhd.module_type: "TrackPMTLHD"
 physics.producers.trkpmtlhd.TrackModuleLabel: "trackkalmanhit"
 physics.producers.trkpmtlhd.FlashModuleLabel: "opflash"
+physics.producers.trkpmtlhd.PairingMode: 0 # (1 gives no flash-track matches!)
+physics.producers.trkpmtlhd.LengthCut: 20 # at least this length track [cm]
+physics.producers.trkpmtlhd.PECut: 20   # at least this many PEs in a flash
 
 physics.analyzers.trkpmtlhdana.module_type: "TrackTimeAssocAna" # in fact, the default
 physics.analyzers.trkpmtlhdana.TrackModuleLabel: "trackkalmanhit"

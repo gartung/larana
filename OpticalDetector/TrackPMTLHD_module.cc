@@ -532,8 +532,9 @@ namespace opdet {
 	  }
       }
     
-    double nllhd=0;
-    
+    double sumNllhd=0;
+    static const double worstNllhd(1.0E6);    
+
     for(size_t i=0; i!=signal.size(); ++i)
       {    
 	// Here we calculate the probability that our expected number of photons mu, 
@@ -544,17 +545,20 @@ namespace opdet {
 	// It is important that the signal=0 tubes in i contribute ...
 	bool range(true);
 	double mu = hypothesis.at(i);
-	int prob = std::floor(signal.at(i) - sqrt(hypothesis.at(i)));
+	int obs = std::max(std::floor(signal.at(i) - sqrt(hypothesis.at(i))), 0.0);
 	while (range)
 	  {
-	    nllhd += -std::log( TMath::Poisson(prob, mu) );
-	    prob++;
+	    double nllhd( -std::log( TMath::Poisson(obs, mu) ) );
+	    nllhd = (std::isinf(nllhd) ? worstNllhd : nllhd);
+	    sumNllhd += nllhd;
+	    //	    std::cout << "GetNegLLHD: i, mu, obs, nllhd: " << i <<  ", " << mu <<", " << obs << ", " << nllhd << "." << std::endl;
+	    obs++;
 	    range=false;
-	    if (prob < std::ceil(hypothesis.at(i) + sqrt(hypothesis.at(i))) ) range=true;
+	    if (obs < std::ceil(signal.at(i) + sqrt(hypothesis.at(i))) ) range=true;
 	  }
       }
 
-    return nllhd;
+    return sumNllhd;
   }
   
 
