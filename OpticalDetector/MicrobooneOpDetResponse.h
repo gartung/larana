@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////
-// \file MicrobooneOpDetResponse.h
+// 
 //
-// \brief service containing information about the response of optical detectors in Microboone
+// MicrobooneOpDetResponse.h -> brief service containing information about the response of optical detectors in Microboone
 //
 // \author ahimmel@phy.duke.edu
 //

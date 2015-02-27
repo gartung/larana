@@ -170,8 +170,7 @@ standard_simphotoncounter:
   MakeDetectedPhotonsTree: true
   MakeOpDetsTree:          true
   MakeOpDetEventsTree:     true
-<<<<<<< HEAD
-=======
+
   QuantumEfficiency:       1
   QuantumEfficiencyDetails: false
   QuantumEfficiencyVectorHmm:[0.0, 0.042, 0.2, 0.27, 0.28, 0.3, 0.291, 0.233, 0.167,0.0]
@@ -183,14 +182,14 @@ standard_simphotoncounter:
 # [0.13, 0.24, 0.24, 0.24, 0.24, 0.24, 0.20, 0.10, 0.01,0.0]
   WavelengthCutLow:        0 
   WavelengthCutHigh:       10000
-  UsePMTEff:       false
+  LariatFast:       false
   NewDetectorApproach: false
   DetectorNumber: 5
   DetectorTypes: 4
   ChannelTypes: [0,1,2,2,3]# write type number for each channel
   QuantumEfficiencyVector:[[0.0, 0.0, 0.14, 0.18, 0.2, 0.19, 0.18, 0.14, 0.02,0.0],[0.0, 0.042, 0.2, 0.27, 0.28, 0.3, 0.291, 0.233, 0.167,0.0],[0.19, 0.35, 0.35, 0.35, 0.35, 0.35, 0.25, 0.15, 0.02,0.0],[0.19, 0.35, 0.35, 0.35, 0.35, 0.35, 0.25, 0.15, 0.02,0.0],[0.13, 0.24, 0.24, 0.24, 0.24, 0.24, 0.20, 0.10, 0.01,0.0] ]
   QuantumEfficiencyEnergiesVector:[[1.77, 2.0675, 2.481, 2.819, 2.953, 3.1807, 3.54, 4.135, 4.962, 5.39],[1.77, 2.0675, 2.481, 2.819, 2.953, 3.1807, 3.54, 4.135, 4.962, 5.39],[1.77, 2.0675, 2.481, 2.819, 2.953, 3.1807, 3.54, 4.135, 4.962, 5.39],[1.77, 2.0675, 2.481, 2.819, 2.953, 3.1807, 3.54, 4.135, 4.962, 5.39]]
->>>>>>> origin/feature/opticalsim_merge
+
 }
 
 
@@ -346,5 +345,15 @@ microboone_opflashana:       @local::standard_opflashana
 
 microboone_optdetdigitizer:  @local::standard_optdetdigitizer
 microboone_optical_readout:  @local::standard_optical_readout
+
+lariat_simphotoncounter: @local::standard_simphotoncounter
+lariat_opdigi:           @local::standard_opdigi
+lariat_tracktimeassoc:   @local::standard_tracktimeassoc
+lariat_opflash:          @local::standard_opflash
+
+lariat_opdigiana:        @local::standard_opdigiana
+lariat_opflashana:       @local::standard_opflashana
+
+
 
 END_PROLOG
