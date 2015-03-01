@@ -206,6 +206,7 @@ namespace opdet {
     
     art::ServiceHandle<phot::PhotonVisibilityService> pvs;
 
+    float totalLength(0.0);
     float OldVertex   = track->Vertex()[0];
     
     std::vector<bool> ValidTrajectory(XSteps, true);
@@ -217,23 +218,25 @@ namespace opdet {
 	double MIPYield   = larp->ScintYield();
 	// should get from OpDigiServices->QE(), which is a step better.
 	double QE         = 0.01; 
+	/*
 	double dQdx       = 0.0;
 	if (s<track->NumberdQdx(geo::kW)) 
 	  dQdx = track->DQdxAtPoint(s,geo::kW);
+	*/
 	double PromptFrac = 0.25;
 	// calculate number of photons as 1-NumElectrons
-	double PromptScintYield = MIPYield * QE * larp->ModBoxCorrection(dQdx)  * PromptFrac;
+	//	double PromptScintYield = MIPYield * QE * larp->ModBoxCorrection(dQdx) * PromptFrac;
+	double PromptScintYield = MIPYield * QE * 2.1 * PromptFrac;
 	if (PromptScintYield < 0.0) 
 	  PromptScintYield = 0.0;
-	
-	//	std::cout<<"check : " << PromptMIPScintYield<<std::endl;
-	TVector3 p, pp;
-	TVector3 xyz, xyzp;
-	track->TrajectoryAtPoint(s,p,xyz);
-	track->TrajectoryAtPoint(s-1,pp,xyzp);
+	TVector3 p, pp; // dir
+	TVector3 xyz, xyzp; //pos
+	track->TrajectoryAtPoint(s,xyz,p);
+	track->TrajectoryAtPoint(s-1,xyzp,pp);
 
+       
 	float LightAmount     = PromptScintYield * (xyzp-xyz).Mag();
-	
+	totalLength += (xyzp-xyz).Mag();
 	// for each location in x Ben/we sum(s) photons from over the whole track (in the for over b)
 	// at a given PMT. Which is just what we want for the likelihood function.
 	
@@ -251,13 +254,30 @@ namespace opdet {
 		
 		for(size_t OpDet =0; OpDet!=PointVisibility->size();  OpDet++)
 		  {
+
+		    //		    if (PointVisibility->at(OpDet) < 0.0000000001 &&  xyz[2]>0.0 )
+		      //		      std::cout<<" ScanHypothesis() check : PointVisibility is 0 for opdet " << OpDet << " at x,y,z: "  << xyz[0] << ", " << xyz[1] << ", " << xyz[2] << "." << " Distance, LightAmount are " << pvs->DistanceToOpDet(xyzv,OpDet) << ", " << LightAmount << "." << std::endl;
+		    
 		    SummedPhotons.at(i).at(OpDet) += PointVisibility->at(OpDet) * LightAmount;
 		  }
 	      }
-	  }
-      }
+	  } // end x scan
+      } // end trajectory
+
     for(size_t i=0; i!=SummedPhotons.size(); ++i)
       if(!ValidTrajectory[i]) SummedPhotons.at(i).clear();
+
+    for(size_t i=0; i!=SummedPhotons.size() && ValidTrajectory[i] ; ++i) 
+      {
+	std::cout<<" ScanHypothesis() Sum of photons for this track for x offset : "  << i << std::endl;
+	std::cout<<" ScanHypothesis() TrackLength : "  << totalLength << std::endl;
+	for(size_t OpDet =0; OpDet!=geom->NOpDet();  OpDet++)
+	  {
+	    std::cout<<" \t OpDet : "  << OpDet << " , total photons: " << SummedPhotons.at(i).at(OpDet) << std::endl;
+	  }
+
+      }
+
     return SummedPhotons;
   }
 
@@ -273,10 +293,12 @@ namespace opdet {
   //
   double TrackPMTLHD::GetMinChi2(std::vector<std::vector<double> > ScannedHypotheses, std::vector<double> FlashShape)
   {
-    double MinChi2  = 10000;
+    double MinChi2  = 1.E6;
     if(FlashShape.size()==0) return MinChi2;
     
-    for(size_t i=0; i!=ScannedHypotheses.size(); ++i)
+    // this is the x-scan
+    for(size_t i=0; i!=ScannedHypotheses.size(); ++i) 
+      // ScannedHypothesis.at(i) is  a vector of length N_PMTs  for a given x_i
       {
 	if(ScannedHypotheses.at(i).size()>0)
 	  {
@@ -287,6 +309,8 @@ namespace opdet {
 	      }
 	  }
       }
+    // This is where we chuck all chi2 in the x-scan and keep only the best one.
+    // I need to actually hold the whole vector or make the plot here of the full Chi2.
     return MinChi2;
   }
 
@@ -366,6 +390,8 @@ namespace opdet {
     // For each track
     for (size_t i=0; i!=Tracks.size(); ++i)
       {
+	// ScanHypothesis holds an array of N x M numbers for a given Track.
+	// N is the number of samples in the scan over x; M is the number of PMTs (32).
 	TrackHypotheses.push_back(ScanHypotheses(Tracks.at(i) ) );
       }
     
@@ -509,6 +535,9 @@ namespace opdet {
   double TrackPMTLHD::GetNegLLHD(std::vector<double> signal, std::vector<double> hypothesis, double UpperLim)
   {
        
+    double sumNllhd=0;
+    static const double worstNllhd(1.0E6);    
+
     double SignalIntegral = 0;
     double HypoIntegral = 0;
 
@@ -532,31 +561,46 @@ namespace opdet {
 	  }
       }
     
-    double sumNllhd=0;
-    static const double worstNllhd(1.0E6);    
 
     for(size_t i=0; i!=signal.size(); ++i)
       {    
+
 	// Here we calculate the probability that our expected number of photons mu, 
-	// (summed over all track segments from a track translated to a given x) fluctuates to that
-	// which is observed, signal. What we really want to know is the summed
-	// probability of the signal over the integers from signal +/- some width to
-	// fluctuate to mu.
+	// (summed over all track segments from a track translated to a given x) fluctuates 
+	// to that which is observed, signal i. 
+	//
 	// It is important that the signal=0 tubes in i contribute ...
+	// The thing that makes something infinitely improbable and thus the negllhd is huge,
+	// is if we expect precisely 0 signal and yet we have a non-zero contribution in 
+	// the flash on a given tube, i. This destroys all hope of this flash being matched
+	// to this track.
+
 	bool range(true);
-	double mu = hypothesis.at(i);
+	//	double mu = std::max(hypothesis.at(i),0.00001); // zero is bad.
+	double mu = hypothesis.at(i); 
+	double sumProb(0.0);
+
+	// Add all probabilities of observed fluctuating to expectation mu over
+	// a range of observed +/- some error.
 	int obs = std::max(std::floor(signal.at(i) - sqrt(hypothesis.at(i))), 0.0);
+	//int obs = 0;
 	while (range)
 	  {
-	    double nllhd( -std::log( TMath::Poisson(obs, mu) ) );
-	    nllhd = (std::isinf(nllhd) ? worstNllhd : nllhd);
-	    sumNllhd += nllhd;
-	    //	    std::cout << "GetNegLLHD: i, mu, obs, nllhd: " << i <<  ", " << mu <<", " << obs << ", " << nllhd << "." << std::endl;
+	    double nllhd( TMath::Poisson(obs, mu) );
+	    sumProb += nllhd;
 	    obs++;
 	    range=false;
 	    if (obs < std::ceil(signal.at(i) + sqrt(hypothesis.at(i))) ) range=true;
+	    //	    if (obs <= std::floor(signal.at(i)) ) range=true;
 	  }
-      }
+
+	    double nllhd( -std::log( sumProb ) );
+	    nllhd = (std::isinf(nllhd) ? worstNllhd : nllhd);
+	    //	    if (nllhd == worstNllhd)
+	    //	      std::cout << "GetNegLLHD: i, mu, signal: " << i <<  ", " << mu <<", " << signal.at(i) << "." << std::endl;
+	    sumNllhd+=nllhd;
+
+      }  // sum on each observed signal on PMT_i
 
     return sumNllhd;
   }
