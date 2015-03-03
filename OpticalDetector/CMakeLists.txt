@@ -1,3 +1,6 @@
+IF(ALT_CMAKE)
+INCLUDE(altCMakeLists.cmake)
+ELSE()
 
 # OpFlashFinder_module.cc is not built - it seems specific to uboone
 
@@ -114,3 +117,4 @@ install_fhicl()
 install_source()
 install_fw( LIST toyWaveform.txt
             SUBDIRNAME OpticalDetector )
+ENDIF()
