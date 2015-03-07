@@ -1,0 +1,17 @@
+#include "opticaldetectormodules.fcl"
+
+BEGIN_PROLOG
+
+lariat_simphotoncounter: @local::standard_simphotoncounter
+lariat_opdigi:           @local::standard_opdigi
+lariat_tracktimeassoc:   @local::standard_tracktimeassoc
+lariat_opflash:          @local::standard_opflash
+
+lariat_opdigiana:        @local::standard_opdigiana
+lariat_opflashana:       @local::standard_opflashana
+
+lariat_simphotoncounteralg: @local::standard_simphotoncounteralg
+lariat_flashhypothesisanaalg: @local::standard_flashhypothesisanaalg
+lariat_flashhypothesisanamodule: @local::standard_flashhypothesisanamodule
+
+END_PROLOG
