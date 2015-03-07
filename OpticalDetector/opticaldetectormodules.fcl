@@ -74,6 +74,7 @@ standard_optical_readout:
 
 standard_optical_WVmodule:
 {
+#placeholder for module which will be based on OpticalFEM module
   module_type:               "OpticalWV"    # The module we're trying to execute.
   BeamGateModule:            "generator"     # the name of the process used to generate the simulated beam gate
   OpticalDigitizationModule: "optdigitizer"  # the name of the process used to generate the input ADC counts
