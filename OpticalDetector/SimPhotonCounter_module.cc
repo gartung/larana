@@ -233,7 +233,7 @@ namespace opdet {
 	// timeHists = tfs->make<TObjArray>();
 	// distHists = tfs->make<TObjArray>();
        timeHist=new TH1F("timehist","",200,0,80);
-       distHist==new TH1F("disthist","",200,0,80);
+       distHist=new TH1F("disthist","",200,0,80);
 	  
 	  
         }    
@@ -442,11 +442,11 @@ namespace opdet {
 		  }
 	      }
 	  
-	  if(fMakeTimeTree)
-		  {
-	     timeHist->Write();     // all objects from timeHists are written 
-             distHist->Write();
-		  }
+	    if(fMakeTimeTree)
+		    {
+		    timeHist->Write();     // all objects from timeHists are written 
+		    distHist->Write();
+		    }
 	  	      
 	    // If this is a library building job, fill relevant entry
 //	    art::ServiceHandle<phot::PhotonVisibilityService> pvs;
