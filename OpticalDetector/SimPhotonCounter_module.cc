@@ -55,6 +55,7 @@
 
 // ROOT includes
 #include <TH1D.h>
+#include <TH1F.h>
 #include <TF1.h>
 #include <TTree.h>
 
@@ -63,6 +64,7 @@
 #include <sstream>
 #include <cstring>
 #include <vector>
+#include <map>
 
 #include "CLHEP/Random/RandFlat.h"
 #include "CLHEP/Random/RandGaussQ.h"
@@ -80,6 +82,9 @@ namespace opdet {
       void beginJob();
       void endJob();
      
+	//Time ahack
+	  void clearVectors(int OpCh, int Voxels);
+
     private:
       
       // Trees to output
@@ -88,6 +93,11 @@ namespace opdet {
       TTree * fThePhotonTreeDetected;
       TTree * fTheOpDetTree;
       TTree * fTheEventTree;
+	// Timing Tree --ahack
+	  TTree * fTheTimeTree;
+	  //TH1F * fTheTimeHist ; 
+ 	  TObjArray *timeHists ;
+	  TObjArray *distHists ;
 
 
       // Parameters to read in
@@ -124,6 +134,17 @@ namespace opdet {
       Int_t fOpChannel;
 
 
+	//Time Tree --ahack
+	  bool fMakeTimeTree = true;
+	  std::vector<std::vector<std::vector<float>>> fLookupTime ;
+	  std::vector<std::vector<std::vector<float>>> fLookupDist ;
+	  Int_t	fVoxel;
+	  Float_t fDist;
+
+	//Corey's fix
+	  std::map<int,int> voxelToIndex ;
+	  std::vector<int> fVoxelList ;
+
     };
 }
 
@@ -145,6 +166,16 @@ namespace opdet {
     fQE=                       pset.get<double>("QuantumEfficiency");
     fWavelengthCutLow=         pset.get<double>("WavelengthCutLow");
     fWavelengthCutHigh=        pset.get<double>("WavelengthCutHigh");
+	fVoxelList= 			   pset.get<std::vector<int> > ("VoxelList");
+
+	int i=0;
+	for(auto & vox : fVoxelList){
+//		std::cout<<"Do we get stuck here? "<<std::endl;
+		voxelToIndex[vox]=i;
+		i++;
+		}
+
+
     // get the random number seed, use a random default if not specified    
     // in the configuration file.  
     unsigned int seed = pset.get< unsigned int >("Seed", sim::GetRandomNumberSeed());
@@ -183,6 +214,7 @@ namespace opdet {
 	fTheOpDetTree->Branch("OpChannel",          &fOpChannel,            "OpChannel/I");
 	fTheOpDetTree->Branch("CountAll",       &fCountOpDetAll,      "CountAll/I");
 	fTheOpDetTree->Branch("CountDetected",  &fCountOpDetDetected, "CountDetected/I");
+	fTheOpDetTree->Branch("Time",  			&fTime,				 "Time/F");
       }
     
     if(fMakeOpDetEventsTree)
@@ -192,6 +224,21 @@ namespace opdet {
 	fTheEventTree->Branch("CountAll",     &fCountEventAll,     "CountAll/I");
 	fTheEventTree->Branch("CountDetected",&fCountEventDetected,"CountDetected/I");
       }
+
+	//ahack
+     if(fMakeTimeTree)
+       {
+     fTheTimeTree = tfs->make<TTree>("PerVoxOpCh","PerVoxOpCh");
+//	 fTheTimeTree->Branch("fLookupTime","std::vector<std::vector<std::vector<float>>>",&fLookupTime); 
+//	 fTheTimeTree->Branch("fLookupDist","std::vector<std::vector<std::vector<float>>>",&fLookupDist); 
+	 fTheTimeTree->Branch("OpChannel", &fOpChannel, "OpChannel/I");
+	 fTheTimeTree->Branch("Voxel", &fVoxel, "Voxel/I");
+
+//	 fTheTimeHist = tfs->make<TH1F>("TimeHist","Time per vox per opch",100,0,120) ;
+	 timeHists = tfs->make<TObjArray>();
+	 distHists = tfs->make<TObjArray>();
+        }    
+
 
   }
 
@@ -210,6 +257,26 @@ namespace opdet {
       }
   }
 
+	//Time --ahack
+	void SimPhotonCounter::clearVectors(int OpCh, int Voxels){
+
+		fLookupTime.clear();
+		fLookupTime.resize(OpCh); 	
+
+		fLookupDist.clear();
+		fLookupDist.resize(OpCh); 	
+
+	 	for(int i=0; i < OpCh; i++){
+    	   fLookupTime[i].resize(Voxels);  
+    	   fLookupDist[i].resize(Voxels);  
+			for(int j=0; j < Voxels; j++){
+			  fLookupTime[i][j].resize(0) ;
+			  fLookupDist[i][j].resize(0) ;
+				}
+         }
+		}
+
+
   void SimPhotonCounter::analyze(art::Event const& evt)
   {
 
@@ -222,8 +289,14 @@ namespace opdet {
     art::EventNumber_t event = evt.id().event();
     fEventID=Int_t(event);
 
+ 	//Time --ahack
+	art::ServiceHandle<phot::PhotonVisibilityService> pvs;
+
+
+
     art::ServiceHandle<sim::LArG4Parameters> lgp;
     bool fUseLitePhotons = lgp->UseLitePhotons();
+
 
     if(!fUseLitePhotons)
     {
@@ -233,6 +306,19 @@ namespace opdet {
     //Reset counters
     fCountEventAll=0;
     fCountEventDetected=0;
+
+	//ahack
+	auto VoxelDef = pvs->GetVoxelDef();
+	auto Voxels = VoxelDef.GetNVoxels();
+   // auto Voxels = fVoxelList.size();
+    clearVectors(TheHitCollection.size(),Voxels);
+	//std::cout<<"Voxels! "<<Voxels<<std::endl;
+	
+//ahack
+//	TH1F *h[TheHitCollection.size()][Voxels]; 
+//	for(Int_t o=0; o< TheHitCollection.size(); o++){
+//		  h[o][fEventID-1] = new TH1F(Form("h%f_%f",o,fEventID-1),"Title",100,0,120);
+//	}
 
     if(fVerbosity > 0) std::cout<<"Found OpDet hit collection of size "<< TheHitCollection.size()<<std::endl;
     if(TheHitCollection.size()>0)
@@ -247,7 +333,7 @@ namespace opdet {
 	    fOpChannel=itOpDet->first;
 	    const sim::SimPhotons& TheHit=itOpDet->second;
 	     
-	    //	    std::cout<<"OpDet " << fOpChannel << " has size " << TheHit.size()<<std::endl;
+	        std::cout<<"OpDet " << fOpChannel << " has size " << TheHit.size()<<std::endl;
 	    
 	    // Loop through OpDet phots.  
 	    //   Note we make the screen output decision outside the loop
@@ -262,7 +348,8 @@ namespace opdet {
 		    fWavelength= (2.0*3.142)*0.000197/Phot.Energy;
 
 		    //Get arrival time from phot
-		    fTime= Phot.Time;
+		    fTime = Phot.Time;
+
 		    std::cout<<"Arrival time: " << fTime<<std::endl;
 		    
 		    // Increment per OpDet counters and fill per phot trees
@@ -280,12 +367,28 @@ namespace opdet {
 	      }
 	    else
 	      {
+		//ahack
+		// having segfault issues with this;not sure why. Using 1/c below.
+		//	quantity is 0.0333564 
+		//	float speedOfLight = 29.9792 ; //in cm/ns
+	//	std::cout<<"Voxel, OpChannel: "<<fEventID -1<<", "<<fOpChannel<<std::endl;
 		for(const sim::OnePhoton& Phot: TheHit)
 		  {
 		    // Calculate wavelength in nm
 		    fWavelength= (2.0*3.142)*0.000197/Phot.Energy;
 		    fTime= Phot.Time;		
-    
+
+			//Get distance of photon's start point from point located on OpDet and convert
+			//mm to cm (LArG4)
+			fDist =0.0333564*0.1*pow(pow(Phot.InitialPosition.X() - Phot.FinalPosition.X(),2)
+					  + pow(Phot.InitialPosition.Y() - Phot.FinalPosition.Y(),2) 
+					  + pow(Phot.InitialPosition.Z() - Phot.FinalPosition.Z(),2),0.5);  
+
+	//		std::cout<<"Initial Pos :"<<Phot.InitialPosition.X() <<std::endl;
+	//				 <<" "<<Phot.InitialPosition.Y()<<" "<<Phot.InitialPosition.Z()
+	//		std::cout<<"\nFinal Pos: "<<Phot.FinalPosition.X()/10
+	//				 <<" "<<Phot.FinalPosition.Y()/10<<" "<<Phot.FinalPosition.Z()/10<<std::endl;
+
 		    // Increment per OpDet counters and fill per phot trees
 		    fCountOpDetAll++;
 		    if(fMakeAllPhotonsTree) fThePhotonTreeAll->Fill();
@@ -294,12 +397,30 @@ namespace opdet {
 			if(fMakeDetectedPhotonsTree) fThePhotonTreeDetected->Fill();
 			fCountOpDetDetected++;
 		      }
+
+//			std::cout<<"Stopping before filling time and dist vecs"<<std::endl;
+			//Fill time&dist assoc with an OpChannel and voxel --ahack
+			if(pvs->IsBuildJob()) //&& voxelToIndex.find(fEventID-1)!= voxelToIndex.end() )
+                   {
+//				std::cout<<"Adding to the vector of vector...etc.  "<<std::endl;
+                 fLookupTime[fOpChannel][fEventID-1].push_back(fTime) ;
+                 fLookupDist[fOpChannel][fEventID-1].push_back(fDist) ;
+
+//				fLookupTime[fOpChannel][voxelToIndex[fEventID-1]].push_back(fTime); 
+//				fLookupDist[fOpChannel][voxelToIndex[fEventID-1]].push_back(fDist);
+
+				 //std::cout<<"\nTime: "<<fTime<<", size while filling: ["<<fOpChannel<<"]["<<VoxID<<"] "<<fLookupTime[fOpChannel][VoxID].size();
+
+		//		std::cout<<"Leaving from adding to the vector of vector...etc.  "<<std::endl;
+					}
+
 		  }
 	      }
 	  
+
 	  	      
 	    // If this is a library building job, fill relevant entry
-	    art::ServiceHandle<phot::PhotonVisibilityService> pvs;
+//	    art::ServiceHandle<phot::PhotonVisibilityService> pvs;
 	    if(pvs->IsBuildJob())
 	      {
 		int VoxID; double NProd;
@@ -316,6 +437,53 @@ namespace opdet {
 	    // Give per OpDet output
 	    if(fVerbosity >2) std::cout<<"OpDetResponse PerOpDet : Event "<<fEventID<<" OpDet " << fOpChannel << " All " << fCountOpDetAll << " Det " <<fCountOpDetDetected<<std::endl; 
 	  }
+
+	 //ahack ->Fill Histogram
+	 char *histname = new char[10];
+	 char *disthistname = new char[10];
+     for(size_t o = 0; o < TheHitCollection.size(); o++){
+	   //only want to store voxel for matching event ID because 1 event is generated in 1 voxel
+	   int v = fEventID - 1 ;
+
+//	   std::cout<<"\nThe timesize after filling ["<<o<<"]["<<v<<"]: "<<fLookupTime[o][v].size();
+//		std::cout<<"i hate larsoft "<<std::endl;
+	   if(pvs->IsBuildJob()){// && voxelToIndex.find(fEventID-1) !=voxelToIndex.end() ){
+//	   	  int v = voxelToIndex[fEventID-1];
+	   if(fLookupTime[int(o)][v].size() > 0. ){
+	 	  sprintf(histname, "hTime_%i_%i",int(o),fEventID-1);
+		  TH1F *timeHist=new TH1F(histname,"",200,0,80);
+
+	 	  sprintf(disthistname, "hDist_%i_%i",int(o),fEventID-1);
+		  TH1F *distHist=new TH1F(disthistname,"",200,0,80);
+
+		  timeHists->AddLast(timeHist);
+		  distHists->AddLast(distHist);
+		  //LookupTime and LookupDist should have same number of elements (distance and time are saved
+		  //per photon, per voxel, per opdet
+		  for(size_t t=0; t< fLookupTime[int(o)][v].size(); t++){
+			timeHist->Fill(fLookupTime[int(o)][v][t]);
+			distHist->Fill(fLookupDist[int(o)][v][t]);
+		 	 }
+//	  for(size_t t=0; t< fLookupTime[int(o)][voxelToIndex[v]].size(); t++){
+//            timeHist->Fill(fLookupTime[int(o)][voxelToIndex[v]][t]);
+//            distHist->Fill(fLookupDist[int(o)][voxelToIndex[v]][t]);
+//              }          
+		  
+	//	  for(size_t d=0; d< fLookupDist[int(o)][v].size(); d++)
+		 	 
+		  
+
+		   timeHist->Write();     // all objects from timeHists are written 
+		   distHist->Write();
+		 	} 
+		 }//if IsBuildJob
+		else{
+			continue;
+			std::cout<<"we should never get here..."<<std::endl;
+		}
+
+     }       
+
 
 	// Fill per event tree
 	if(fMakeOpDetEventsTree) fTheEventTree->Fill();
