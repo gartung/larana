@@ -26,8 +26,8 @@
 // double  QantumEfficiency   - Quantum efficiency of OpDet
 // double  WavelengthCutLow   - Sensitive wavelength range of OpDet
 // double  WavelengthCutHigh
-#ifndef SimPhotonCounter_h
-#define SimPhotonCounter_h 1
+#ifndef SimPhotonCounterModule_h
+#define SimPhotonCounterModule_h 1
 
 // ROOT includes.
 #include "TTree.h"
@@ -49,6 +49,7 @@
 
 // LArSoft includes
 #include "PhotonPropagation/PhotonVisibilityService.h"
+#include "OpticalDetector/OpDetResponseInterface.h"
 #include "Simulation/SimListUtils.h"
 #include "Simulation/sim.h"
 #include "Simulation/LArG4Parameters.h"
@@ -96,10 +97,13 @@ namespace opdet {
 	// Timing Tree --ahack
 	  TTree * fTheTimeTree;
 	  //TH1F * fTheTimeHist ; 
- 	  TObjArray *timeHists ;
-	  TObjArray *distHists ;
+ 	//  TObjArray *timeHists ;
+	 // TObjArray *distHists ;
 
-
+     TH1F *timeHist;//=new TH1F(histname,"",200,0,80);
+     TH1F *distHist; //=new TH1F(disthistname,"",200,0,80);
+	  
+	  
       // Parameters to read in
 
       std::string fInputModule;      // Input tag for OpDet collection
@@ -163,19 +167,10 @@ namespace opdet {
     fMakeDetectedPhotonsTree=  pset.get<bool>("MakeDetectedPhotonsTree");
     fMakeOpDetsTree=           pset.get<bool>("MakeOpDetsTree");
     fMakeOpDetEventsTree=      pset.get<bool>("MakeOpDetEventsTree");
-    fQE=                       pset.get<double>("QuantumEfficiency");
-    fWavelengthCutLow=         pset.get<double>("WavelengthCutLow");
-    fWavelengthCutHigh=        pset.get<double>("WavelengthCutHigh");
-	fVoxelList= 			   pset.get<std::vector<int> > ("VoxelList");
 
-	int i=0;
-	for(auto & vox : fVoxelList){
-//		std::cout<<"Do we get stuck here? "<<std::endl;
-		voxelToIndex[vox]=i;
-		i++;
-		}
-
-
+    //fQE=                       pset.get<double>("QuantumEfficiency");
+    //fWavelengthCutLow=         pset.get<double>("WavelengthCutLow");
+    //fWavelengthCutHigh=        pset.get<double>("WavelengthCutHigh");
     // get the random number seed, use a random default if not specified    
     // in the configuration file.  
     unsigned int seed = pset.get< unsigned int >("Seed", sim::GetRandomNumberSeed());
@@ -235,8 +230,12 @@ namespace opdet {
 	 fTheTimeTree->Branch("Voxel", &fVoxel, "Voxel/I");
 
 //	 fTheTimeHist = tfs->make<TH1F>("TimeHist","Time per vox per opch",100,0,120) ;
-	 timeHists = tfs->make<TObjArray>();
-	 distHists = tfs->make<TObjArray>();
+	// timeHists = tfs->make<TObjArray>();
+	// distHists = tfs->make<TObjArray>();
+       timeHist=new TH1F("timehist","",200,0,80);
+       distHist==new TH1F("disthist","",200,0,80);
+	  
+	  
         }    
 
 
@@ -298,6 +297,10 @@ namespace opdet {
     bool fUseLitePhotons = lgp->UseLitePhotons();
 
 
+    // Service for determining opdet responses
+    art::ServiceHandle<opdet::OpDetResponseInterface> odresponse;
+
+
     if(!fUseLitePhotons)
     {
     //Get SimPhotonsCollection from Event
@@ -339,13 +342,29 @@ namespace opdet {
 	    //   Note we make the screen output decision outside the loop
 	    //   in order to avoid evaluating large numbers of unnecessary 
 	    //   if conditions. 
+   
+	if(fMakeTimeTree)
+	  {	
+	    //ahack ->Fill Histogram
+	   char *histname = new char[10];
+	   char *disthistname = new char[10];	 
+	
+	    sprintf(histname, "hTime_%i_%i",fOpChannel,fEventID-1);
+	    timeHist->Reset();
+	    timeHist->SetName(histname);
 
+	    sprintf(disthistname, "hDist_%i_%i",fOpChannel,fEventID-1);
+	    distHist->Reset();
+            distHist->SetName(disthistname); 
+	   
+	  } 
+		
 	    if(fVerbosity > 3)
 	      {
 		for(const sim::OnePhoton& Phot: TheHit)
 		  {
 		    // Calculate wavelength in nm
-		    fWavelength= (2.0*3.142)*0.000197/Phot.Energy;
+                    fWavelength= odresponse->wavelength(Phot.Energy);
 
 		    //Get arrival time from phot
 		    fTime = Phot.Time;
@@ -355,14 +374,14 @@ namespace opdet {
 		    // Increment per OpDet counters and fill per phot trees
 		    fCountOpDetAll++;
 		    if(fMakeAllPhotonsTree) fThePhotonTreeAll->Fill();
-		    if((flat.fire(1.0)<=fQE)&&(fWavelength>fWavelengthCutLow)&&(fWavelength<fWavelengthCutHigh))
+                    if(odresponse->detected(fOpChannel, Phot))
 		      {
 			if(fMakeDetectedPhotonsTree) fThePhotonTreeDetected->Fill();
 			fCountOpDetDetected++;
-			std::cout<<"OpDetResponse PerPhoton : Event "<<fEventID<<" OpChannel " <<fOpChannel << " Wavelength " << fWavelength << " Detected 1 "<<std::endl;
+			std::cout<<"OpDetResponseInterface PerPhoton : Event "<<fEventID<<" OpChannel " <<fOpChannel << " Wavelength " << fWavelength << " Detected 1 "<<std::endl;
 		      }
 		    else
-		      std::cout<<"OpDetResponse PerPhoton : Event "<<fEventID<<" OpChannel " <<fOpChannel << " Wavelength " << fWavelength << " Detected 0 "<<std::endl;
+		      std::cout<<"OpDetResponseInterface PerPhoton : Event "<<fEventID<<" OpChannel " <<fOpChannel << " Wavelength " << fWavelength << " Detected 0 "<<std::endl;
 		  }
 	      }
 	    else
@@ -375,24 +394,14 @@ namespace opdet {
 		for(const sim::OnePhoton& Phot: TheHit)
 		  {
 		    // Calculate wavelength in nm
-		    fWavelength= (2.0*3.142)*0.000197/Phot.Energy;
+                    fWavelength= odresponse->wavelength(Phot.Energy);
 		    fTime= Phot.Time;		
 
-			//Get distance of photon's start point from point located on OpDet and convert
-			//mm to cm (LArG4)
-			fDist =0.0333564*0.1*pow(pow(Phot.InitialPosition.X() - Phot.FinalPosition.X(),2)
-					  + pow(Phot.InitialPosition.Y() - Phot.FinalPosition.Y(),2) 
-					  + pow(Phot.InitialPosition.Z() - Phot.FinalPosition.Z(),2),0.5);  
-
-	//		std::cout<<"Initial Pos :"<<Phot.InitialPosition.X() <<std::endl;
-	//				 <<" "<<Phot.InitialPosition.Y()<<" "<<Phot.InitialPosition.Z()
-	//		std::cout<<"\nFinal Pos: "<<Phot.FinalPosition.X()/10
-	//				 <<" "<<Phot.FinalPosition.Y()/10<<" "<<Phot.FinalPosition.Z()/10<<std::endl;
-
+		 
 		    // Increment per OpDet counters and fill per phot trees
 		    fCountOpDetAll++;
 		    if(fMakeAllPhotonsTree) fThePhotonTreeAll->Fill();
-		    if((flat.fire(1.0)<=fQE)&&(fWavelength>fWavelengthCutLow)&&(fWavelength<fWavelengthCutHigh))
+                    if(odresponse->detected(fOpChannel, Phot))
 		      {
 			if(fMakeDetectedPhotonsTree) fThePhotonTreeDetected->Fill();
 			fCountOpDetDetected++;
@@ -403,8 +412,24 @@ namespace opdet {
 			if(pvs->IsBuildJob()) //&& voxelToIndex.find(fEventID-1)!= voxelToIndex.end() )
                    {
 //				std::cout<<"Adding to the vector of vector...etc.  "<<std::endl;
-                 fLookupTime[fOpChannel][fEventID-1].push_back(fTime) ;
-                 fLookupDist[fOpChannel][fEventID-1].push_back(fDist) ;
+		if(fMakeTimeTree)
+		  {	
+		      //Get distance of photon's start point from point located on OpDet and convert
+		   //mm to cm (LArG4)
+		   fDist =0.0333564*0.1*pow(pow(Phot.InitialPosition.X() - Phot.FinalPosition.X(),2)
+			         	  + pow(Phot.InitialPosition.Y() - Phot.FinalPosition.Y(),2) 
+					  + pow(Phot.InitialPosition.Z() - Phot.FinalPosition.Z(),2),0.5);  
+
+	       //		std::cout<<"Initial Pos :"<<Phot.InitialPosition.X() <<std::endl;
+	       //				 <<" "<<Phot.InitialPosition.Y()<<" "<<Phot.InitialPosition.Z()
+	       //		std::cout<<"\nFinal Pos: "<<Phot.FinalPosition.X()/10
+	       //				 <<" "<<Phot.FinalPosition.Y()/10<<" "<<Phot.FinalPosition.Z()/10<<std::endl;
+		    timeHist->Fill(fTime);
+		    distHist->Fill(fDist);
+		    
+		  } 
+               //  fLookupTime[fOpChannel][fEventID-1].push_back(fTime) ;
+               //  fLookupDist[fOpChannel][fEventID-1].push_back(fDist) ;
 
 //				fLookupTime[fOpChannel][voxelToIndex[fEventID-1]].push_back(fTime); 
 //				fLookupDist[fOpChannel][voxelToIndex[fEventID-1]].push_back(fDist);
@@ -417,7 +442,11 @@ namespace opdet {
 		  }
 	      }
 	  
-
+	  if(fMakeTimeTree)
+		  {
+	     timeHist->Write();     // all objects from timeHists are written 
+             distHist->Write();
+		  }
 	  	      
 	    // If this is a library building job, fill relevant entry
 //	    art::ServiceHandle<phot::PhotonVisibilityService> pvs;
@@ -425,7 +454,7 @@ namespace opdet {
 	      {
 		int VoxID; double NProd;
 		pvs->RetrieveLightProd(VoxID, NProd);
-		pvs->SetLibraryEntry(VoxID, fOpChannel, double(fCountOpDetAll)/NProd);		
+		pvs->SetLibraryEntry(VoxID, fOpChannel, double(fCountOpDetDetected)/NProd);		
 	      }
 
 
@@ -435,61 +464,59 @@ namespace opdet {
 	    fCountEventDetected+=fCountOpDetDetected;
 
 	    // Give per OpDet output
-	    if(fVerbosity >2) std::cout<<"OpDetResponse PerOpDet : Event "<<fEventID<<" OpDet " << fOpChannel << " All " << fCountOpDetAll << " Det " <<fCountOpDetDetected<<std::endl; 
+	    if(fVerbosity >2) std::cout<<"OpDetResponseInterface PerOpDet : Event "<<fEventID<<" OpDet " << fOpChannel << " All " << fCountOpDetAll << " Det " <<fCountOpDetDetected<<std::endl; 
 	  }
 
-	 //ahack ->Fill Histogram
-	 char *histname = new char[10];
-	 char *disthistname = new char[10];
-     for(size_t o = 0; o < TheHitCollection.size(); o++){
-	   //only want to store voxel for matching event ID because 1 event is generated in 1 voxel
-	   int v = fEventID - 1 ;
-
-//	   std::cout<<"\nThe timesize after filling ["<<o<<"]["<<v<<"]: "<<fLookupTime[o][v].size();
-//		std::cout<<"i hate larsoft "<<std::endl;
-	   if(pvs->IsBuildJob()){// && voxelToIndex.find(fEventID-1) !=voxelToIndex.end() ){
-//	   	  int v = voxelToIndex[fEventID-1];
-	   if(fLookupTime[int(o)][v].size() > 0. ){
-	 	  sprintf(histname, "hTime_%i_%i",int(o),fEventID-1);
-		  TH1F *timeHist=new TH1F(histname,"",200,0,80);
-
-	 	  sprintf(disthistname, "hDist_%i_%i",int(o),fEventID-1);
-		  TH1F *distHist=new TH1F(disthistname,"",200,0,80);
-
-		  timeHists->AddLast(timeHist);
-		  distHists->AddLast(distHist);
-		  //LookupTime and LookupDist should have same number of elements (distance and time are saved
-		  //per photon, per voxel, per opdet
-		  for(size_t t=0; t< fLookupTime[int(o)][v].size(); t++){
-			timeHist->Fill(fLookupTime[int(o)][v][t]);
-			distHist->Fill(fLookupDist[int(o)][v][t]);
-		 	 }
-//	  for(size_t t=0; t< fLookupTime[int(o)][voxelToIndex[v]].size(); t++){
-//            timeHist->Fill(fLookupTime[int(o)][voxelToIndex[v]][t]);
-//            distHist->Fill(fLookupDist[int(o)][voxelToIndex[v]][t]);
-//              }          
-		  
-	//	  for(size_t d=0; d< fLookupDist[int(o)][v].size(); d++)
-		 	 
-		  
-
-		   timeHist->Write();     // all objects from timeHists are written 
-		   distHist->Write();
-		 	} 
-		 }//if IsBuildJob
-		else{
-			continue;
-			std::cout<<"we should never get here..."<<std::endl;
-		}
-
-     }       
+	
+//      for(size_t o = 0; o < TheHitCollection.size(); o++){
+// 	   //only want to store voxel for matching event ID because 1 event is generated in 1 voxel
+// 	   int v = fEventID - 1 ;
+// 
+// //	   std::cout<<"\nThe timesize after filling ["<<o<<"]["<<v<<"]: "<<fLookupTime[o][v].size();
+// //		std::cout<<"i hate larsoft "<<std::endl;
+// 	   if(pvs->IsBuildJob()){// && voxelToIndex.find(fEventID-1) !=voxelToIndex.end() ){
+// //	   	  int v = voxelToIndex[fEventID-1];
+// 	   if(fLookupTime[int(o)][v].size() > 0. ){
+// 	 	  sprintf(histname, "hTime_%i_%i",int(o),fEventID-1);
+// 		  TH1F *timeHist=new TH1F(histname,"",200,0,80);
+// 
+// 	 	  sprintf(disthistname, "hDist_%i_%i",int(o),fEventID-1);
+// 		  TH1F *distHist=new TH1F(disthistname,"",200,0,80);
+// 
+// 		  timeHists->AddLast(timeHist);
+// 		  distHists->AddLast(distHist);
+// 		  //LookupTime and LookupDist should have same number of elements (distance and time are saved
+// 		  //per photon, per voxel, per opdet
+// 		  for(size_t t=0; t< fLookupTime[int(o)][v].size(); t++){
+// 			timeHist->Fill(fLookupTime[int(o)][v][t]);
+// 			distHist->Fill(fLookupDist[int(o)][v][t]);
+// 		 	 }
+// //	  for(size_t t=0; t< fLookupTime[int(o)][voxelToIndex[v]].size(); t++){
+// //            timeHist->Fill(fLookupTime[int(o)][voxelToIndex[v]][t]);
+// //            distHist->Fill(fLookupDist[int(o)][voxelToIndex[v]][t]);
+// //              }          
+// 		  
+// 	//	  for(size_t d=0; d< fLookupDist[int(o)][v].size(); d++)
+// 		 	 
+// 		  
+// 
+// 		   timeHist->Write();     // all objects from timeHists are written 
+// 		   distHist->Write();
+// 		 	} 
+// 		 }//if IsBuildJob
+// 		else{
+// 			continue;
+// 			std::cout<<"we should never get here..."<<std::endl;
+// 		}
+// 
+//      }       
 
 
 	// Fill per event tree
 	if(fMakeOpDetEventsTree) fTheEventTree->Fill();
 
 	// Give per event output
-	if(fVerbosity >1) std::cout<<"OpDetResponse PerEvent : Event "<<fEventID<<" All " << fCountOpDetAll << " Det " <<fCountOpDetDetected<<std::endl; 	
+	if(fVerbosity >1) std::cout<<"OpDetResponseInterface PerEvent : Event "<<fEventID<<" All " << fCountOpDetAll << " Det " <<fCountOpDetDetected<<std::endl; 	
 
       }
     else
@@ -543,14 +570,14 @@ namespace opdet {
 		    // Increment per OpDet counters and fill per phot trees
 		    fCountOpDetAll++;
 		    if(fMakeAllPhotonsTree) fThePhotonTreeAll->Fill();
-		    if((flat.fire(1.0)<=fQE)&&(fWavelength>fWavelengthCutLow)&&(fWavelength<fWavelengthCutHigh))
+                    if(odresponse->detectedLite(fOpChannel))
 		      {
 			if(fMakeDetectedPhotonsTree) fThePhotonTreeDetected->Fill();
 			fCountOpDetDetected++;
-			std::cout<<"OpDetResponse PerPhoton : Event "<<fEventID<<" OpChannel " <<fOpChannel << " Wavelength " << fWavelength << " Detected 1 "<<std::endl;
+			std::cout<<"OpDetResponseInterface PerPhoton : Event "<<fEventID<<" OpChannel " <<fOpChannel << " Wavelength " << fWavelength << " Detected 1 "<<std::endl;
 		      }
 		    else
-		      std::cout<<"OpDetResponse PerPhoton : Event "<<fEventID<<" OpChannel " <<fOpChannel << " Wavelength " << fWavelength << " Detected 0 "<<std::endl;
+		      std::cout<<"OpDetResponseInterface PerPhoton : Event "<<fEventID<<" OpChannel " <<fOpChannel << " Wavelength " << fWavelength << " Detected 0 "<<std::endl;
             }
             }
 	      }
@@ -567,7 +594,7 @@ namespace opdet {
                 // Increment per OpDet counters and fill per phot trees
                 fCountOpDetAll++;
                 if(fMakeAllPhotonsTree) fThePhotonTreeAll->Fill();
-                if((flat.fire(1.0)<=fQE)&&(fWavelength>fWavelengthCutLow)&&(fWavelength<fWavelengthCutHigh))
+                if(odresponse->detectedLite(fOpChannel))
 		        {
                   if(fMakeDetectedPhotonsTree) fThePhotonTreeDetected->Fill();
                   fCountOpDetDetected++;
@@ -582,13 +609,13 @@ namespace opdet {
 	    fCountEventDetected+=fCountOpDetDetected;
 
 	    // Give per OpDet output
-	    if(fVerbosity >2) std::cout<<"OpDetResponse PerOpDet : Event "<<fEventID<<" OpDet " << fOpChannel << " All " << fCountOpDetAll << " Det " <<fCountOpDetDetected<<std::endl; 
+	    if(fVerbosity >2) std::cout<<"OpDetResponseInterface PerOpDet : Event "<<fEventID<<" OpDet " << fOpChannel << " All " << fCountOpDetAll << " Det " <<fCountOpDetDetected<<std::endl; 
         }
         // Fill per event tree
         if(fMakeOpDetEventsTree) fTheEventTree->Fill();
 
         // Give per event output
-        if(fVerbosity >1) std::cout<<"OpDetResponse PerEvent : Event "<<fEventID<<" All " << fCountOpDetAll << " Det " <<fCountOpDetDetected<<std::endl; 	
+        if(fVerbosity >1) std::cout<<"OpDetResponseInterface PerEvent : Event "<<fEventID<<" All " << fCountOpDetAll << " Det " <<fCountOpDetDetected<<std::endl; 	
 
       }
     else
