@@ -94,6 +94,7 @@ namespace opdet {
       TTree * fThePhotonTreeDetected;
       TTree * fTheOpDetTree;
       TTree * fTheEventTree;
+
 	// Timing Tree --ahack
 	  TTree * fTheTimeTree;
 	  //TH1F * fTheTimeHist ; 
@@ -114,6 +115,7 @@ namespace opdet {
       bool fMakeAllPhotonsTree;      //
       bool fMakeOpDetsTree;         // Switches to turn on or off each output
       bool fMakeOpDetEventsTree;          //
+	  bool fMakeTimeTree = false; 
       
       float fQE;                     // Quantum efficiency of tube
 
@@ -139,7 +141,6 @@ namespace opdet {
 
 
 	//Time Tree --ahack
-	  bool fMakeTimeTree = true;
 	  std::vector<std::vector<std::vector<float>>> fLookupTime ;
 	  std::vector<std::vector<std::vector<float>>> fLookupDist ;
 	  Int_t	fVoxel;
@@ -224,8 +225,6 @@ namespace opdet {
      if(fMakeTimeTree)
        {
      fTheTimeTree = tfs->make<TTree>("PerVoxOpCh","PerVoxOpCh");
-//	 fTheTimeTree->Branch("fLookupTime","std::vector<std::vector<std::vector<float>>>",&fLookupTime); 
-//	 fTheTimeTree->Branch("fLookupDist","std::vector<std::vector<std::vector<float>>>",&fLookupDist); 
 	 fTheTimeTree->Branch("OpChannel", &fOpChannel, "OpChannel/I");
 	 fTheTimeTree->Branch("Voxel", &fVoxel, "Voxel/I");
 
@@ -336,7 +335,7 @@ namespace opdet {
 	    fOpChannel=itOpDet->first;
 	    const sim::SimPhotons& TheHit=itOpDet->second;
 	     
-	        std::cout<<"OpDet " << fOpChannel << " has size " << TheHit.size()<<std::endl;
+//	        std::cout<<"OpDet " << fOpChannel << " has size " << TheHit.size()<<std::endl;
 	    
 	    // Loop through OpDet phots.  
 	    //   Note we make the screen output decision outside the loop
@@ -431,12 +430,8 @@ namespace opdet {
                //  fLookupTime[fOpChannel][fEventID-1].push_back(fTime) ;
                //  fLookupDist[fOpChannel][fEventID-1].push_back(fDist) ;
 
-//				fLookupTime[fOpChannel][voxelToIndex[fEventID-1]].push_back(fTime); 
-//				fLookupDist[fOpChannel][voxelToIndex[fEventID-1]].push_back(fDist);
-
 				 //std::cout<<"\nTime: "<<fTime<<", size while filling: ["<<fOpChannel<<"]["<<VoxID<<"] "<<fLookupTime[fOpChannel][VoxID].size();
 
-		//		std::cout<<"Leaving from adding to the vector of vector...etc.  "<<std::endl;
 					}
 
 		  }
