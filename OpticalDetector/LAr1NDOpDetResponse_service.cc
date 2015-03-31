@@ -1,11 +1,11 @@
 ////////////////////////////////////////////////////////////////////////
 //
-//  \file MicrobooneOpDetResponse_service.cc
+//  \file LAr1NDOpDetResponse_service.cc
 //
 ////////////////////////////////////////////////////////////////////////
 
 
-#include "OpticalDetector/MicrobooneOpDetResponse.h"
+#include "OpticalDetector/LAr1NDOpDetResponse.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "CLHEP/Random/RandFlat.h"
 
@@ -14,19 +14,19 @@ namespace opdet{
 
 
     //--------------------------------------------------------------------
-    MicrobooneOpDetResponse::MicrobooneOpDetResponse(fhicl::ParameterSet const& pset, 
+    LAr1NDOpDetResponse::LAr1NDOpDetResponse(fhicl::ParameterSet const& pset, 
                                          art::ActivityRegistry &/*reg*/)
     {
         this->doReconfigure(pset);
     }
     
     //--------------------------------------------------------------------
-    MicrobooneOpDetResponse::~MicrobooneOpDetResponse() throw()
+    LAr1NDOpDetResponse::~LAr1NDOpDetResponse() throw()
     { }
 
 
     //--------------------------------------------------------------------
-    void MicrobooneOpDetResponse::doReconfigure(fhicl::ParameterSet const& pset)
+    void LAr1NDOpDetResponse::doReconfigure(fhicl::ParameterSet const& pset)
     {
         fQE=                       pset.get<double>("QuantumEfficiency");
         fWavelengthCutLow=         pset.get<double>("WavelengthCutLow");
@@ -35,7 +35,7 @@ namespace opdet{
 
 
     //--------------------------------------------------------------------
-    bool MicrobooneOpDetResponse::doDetected(int OpChannel, const sim::OnePhoton& Phot, int &newOpChannel) const
+    bool LAr1NDOpDetResponse::doDetected(int OpChannel, const sim::OnePhoton& Phot, int &newOpChannel) const
     {
         newOpChannel = OpChannel;
         
@@ -51,7 +51,7 @@ namespace opdet{
     }
     
     //--------------------------------------------------------------------
-    bool MicrobooneOpDetResponse::doDetectedLite(int OpChannel, int &newOpChannel) const
+    bool LAr1NDOpDetResponse::doDetectedLite(int OpChannel, int &newOpChannel) const
     {
         newOpChannel = OpChannel;
         
@@ -65,5 +65,5 @@ namespace opdet{
 
 } // namespace
 
-DEFINE_ART_SERVICE_INTERFACE_IMPL(opdet::MicrobooneOpDetResponse, opdet::OpDetResponseInterface)
+DEFINE_ART_SERVICE_INTERFACE_IMPL(opdet::LAr1NDOpDetResponse, opdet::OpDetResponseInterface)
 
