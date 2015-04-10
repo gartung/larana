@@ -312,8 +312,11 @@ namespace opdet {
 	//ahack
 	auto VoxelDef = pvs->GetVoxelDef();
 	auto Voxels = VoxelDef.GetNVoxels();
+
+       //std::cout << " voxels: " << Voxels << " Def " << VoxelDef << std::endl;
+       std::cout << " voxels: " << Voxels << " Def "  << std::endl;
    // auto Voxels = fVoxelList.size();
-    clearVectors(TheHitCollection.size(),Voxels);
+  //  clearVectors(TheHitCollection.size(),Voxels);
 	//std::cout<<"Voxels! "<<Voxels<<std::endl;
 	
 //ahack
