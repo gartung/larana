@@ -101,8 +101,10 @@ namespace opdet {
  	//  TObjArray *timeHists ;
 	 // TObjArray *distHists ;
 
-     TH1F *timeHist;//=new TH1F(histname,"",200,0,80);
-     TH1F *distHist; //=new TH1F(disthistname,"",200,0,80);
+     //TH1F *timeHist;//=new TH1F(histname,"",200,0,80);
+     TH1F *timeHist[308];
+     TH1F *distHist[308];
+     //TH1F *distHist; //=new TH1F(disthistname,"",200,0,80);
 	  
 	  
       // Parameters to read in
@@ -115,16 +117,21 @@ namespace opdet {
       bool fMakeAllPhotonsTree;      //
       bool fMakeOpDetsTree;         // Switches to turn on or off each output
       bool fMakeOpDetEventsTree;          //
-	  bool fMakeTimeTree = false; 
+      bool fMakeTimeTree = true; 
       
       float fQE;                     // Quantum efficiency of tube
 
       float fWavelengthCutLow;       // Sensitive wavelength range 
       float fWavelengthCutHigh;      // 
 
+      int VoxID,i,j;
+      double NProd;
+      TVector3 initialPhotonPosition;
+      TVector3 finalPhotonPosition;
 
+      char *histname = new char[50];
+      char *disthistname = new char[50];	 
       
-
       // Data to store in trees
 
       Float_t fWavelength;
@@ -224,15 +231,26 @@ namespace opdet {
 	//ahack
      if(fMakeTimeTree)
        {
-     fTheTimeTree = tfs->make<TTree>("PerVoxOpCh","PerVoxOpCh");
-	 fTheTimeTree->Branch("OpChannel", &fOpChannel, "OpChannel/I");
-	 fTheTimeTree->Branch("Voxel", &fVoxel, "Voxel/I");
+        fTheTimeTree = tfs->make<TTree>("PerVoxOpCh","PerVoxOpCh");
+	fTheTimeTree->Branch("OpChannel", &fOpChannel, "OpChannel/I");
+	fTheTimeTree->Branch("Voxel", &fVoxel, "Voxel/I");
 
 //	 fTheTimeHist = tfs->make<TH1F>("TimeHist","Time per vox per opch",100,0,120) ;
 	// timeHists = tfs->make<TObjArray>();
 	// distHists = tfs->make<TObjArray>();
-       timeHist=new TH1F("timehist","",200,0,80);
-       distHist=new TH1F("disthist","",200,0,80);
+       //timeHist = new TH1F("timehist","",200,0,80);
+       //distHist=new TH1F("disthist","",700,0,700);
+
+        // Initialize a vector of histograms. -wforeman
+        for(int i=0; i<308;i++){
+	  sprintf(histname, "hTime_%i",i);
+          timeHist[i] = new TH1F(histname,"",1500,0.,150.);
+          printf("Initializing histogram %s\n",histname);
+          //timeHist[i].TH1F(histname,"",750,0.,150.);
+	  sprintf(histname, "hDist_%i",i);
+          distHist[i] = new TH1F(histname,"",1500,0.,150.);
+          printf("Initializing histogram %s\n",histname);
+        }
 	  
 	  
         }    
@@ -264,15 +282,15 @@ namespace opdet {
 		fLookupDist.clear();
 		fLookupDist.resize(OpCh); 	
 
-	 	for(int i=0; i < OpCh; i++){
-    	   fLookupTime[i].resize(Voxels);  
-    	   fLookupDist[i].resize(Voxels);  
-			for(int j=0; j < Voxels; j++){
+	 	for( i=0; i < OpCh; i++){
+    	          fLookupTime[i].resize(Voxels);  
+    	          fLookupDist[i].resize(Voxels);  
+			for( j=0; j < Voxels; j++){
 			  fLookupTime[i][j].resize(0) ;
 			  fLookupDist[i][j].resize(0) ;
-				}
-         }
-		}
+		        }
+                 }
+	}
 
 
   void SimPhotonCounter::analyze(art::Event const& evt)
@@ -314,7 +332,6 @@ namespace opdet {
 	auto Voxels = VoxelDef.GetNVoxels();
 
        //std::cout << " voxels: " << Voxels << " Def " << VoxelDef << std::endl;
-       std::cout << " voxels: " << Voxels << " Def "  << std::endl;
    // auto Voxels = fVoxelList.size();
   //  clearVectors(TheHitCollection.size(),Voxels);
 	//std::cout<<"Voxels! "<<Voxels<<std::endl;
@@ -325,7 +342,8 @@ namespace opdet {
 //		  h[o][fEventID-1] = new TH1F(Form("h%f_%f",o,fEventID-1),"Title",100,0,120);
 //	}
 
-    if(fVerbosity > 0) std::cout<<"Found OpDet hit collection of size "<< TheHitCollection.size()<<std::endl;
+    //std::cout<<"Found OpDet hit collection of size "<< TheHitCollection.size()<<std::endl;
+    
     if(TheHitCollection.size()>0)
       {
 	for(sim::SimPhotonsCollection::const_iterator itOpDet=TheHitCollection.begin(); itOpDet!=TheHitCollection.end(); itOpDet++)
@@ -337,8 +355,8 @@ namespace opdet {
 	    //Get data from HitCollection entry
 	    fOpChannel=itOpDet->first;
 	    const sim::SimPhotons& TheHit=itOpDet->second;
-	     
-//	        std::cout<<"OpDet " << fOpChannel << " has size " << TheHit.size()<<std::endl;
+
+	    //std::cout<<"OpDet " << fOpChannel << " has size " << TheHit.size()<<std::endl;
 	    
 	    // Loop through OpDet phots.  
 	    //   Note we make the screen output decision outside the loop
@@ -348,16 +366,17 @@ namespace opdet {
 	if(fMakeTimeTree)
 	  {	
 	    //ahack ->Fill Histogram
-	   char *histname = new char[10];
-	   char *disthistname = new char[10];	 
 	
-	    sprintf(histname, "hTime_%i_%i",fOpChannel,fEventID-1);
-	    timeHist->Reset();
-	    timeHist->SetName(histname);
+	   //char *histname = new char[10];
+	   //char *disthistname = new char[10];	 
+	    //sprintf(histname, "hTime_%i_%i",fOpChannel,fEventID-1);
+	    //timeHist->Reset();
+	    //timeHist->SetName(histname);
 
-	    sprintf(disthistname, "hDist_%i_%i",fOpChannel,fEventID-1);
-	    distHist->Reset();
-            distHist->SetName(disthistname); 
+            //std::cout<<"Histname: "<<histname<<"\n";
+	    //sprintf(disthistname, "hDist_%i_%i",fOpChannel,fEventID-1);
+	    //distHist->Reset();
+            //distHist->SetName(disthistname); 
 	   
 	  } 
 		
@@ -396,8 +415,12 @@ namespace opdet {
 		for(const sim::OnePhoton& Phot: TheHit)
 		  {
 		    // Calculate wavelength in nm
+                    //std::cout<<"Calculating wavelength: ";
                     fWavelength= odresponse->wavelength(Phot.Energy);
-		    fTime= Phot.Time;		
+		    fTime= Phot.Time;
+                    initialPhotonPosition = Phot.InitialPosition;	
+                    finalPhotonPosition = Phot.FinalLocalPosition;
+                    //std::cout<<fWavelength<<"  time = "<<fTime<<"\n";
 
 		 
 		    // Increment per OpDet counters and fill per phot trees
@@ -412,45 +435,52 @@ namespace opdet {
 //			std::cout<<"Stopping before filling time and dist vecs"<<std::endl;
 			//Fill time&dist assoc with an OpChannel and voxel --ahack
 			if(pvs->IsBuildJob()) //&& voxelToIndex.find(fEventID-1)!= voxelToIndex.end() )
-                   {
-//				std::cout<<"Adding to the vector of vector...etc.  "<<std::endl;
-		if(fMakeTimeTree)
-		  {	
-		      //Get distance of photon's start point from point located on OpDet and convert
-		   //mm to cm (LArG4)
-		   fDist =0.0333564*0.1*pow(pow(Phot.InitialPosition.X() - Phot.FinalPosition.X(),2)
-			         	  + pow(Phot.InitialPosition.Y() - Phot.FinalPosition.Y(),2) 
-					  + pow(Phot.InitialPosition.Z() - Phot.FinalPosition.Z(),2),0.5);  
+                        {
 
-	       //		std::cout<<"Initial Pos :"<<Phot.InitialPosition.X() <<std::endl;
-	       //				 <<" "<<Phot.InitialPosition.Y()<<" "<<Phot.InitialPosition.Z()
-	       //		std::cout<<"\nFinal Pos: "<<Phot.FinalPosition.X()/10
-	       //				 <<" "<<Phot.FinalPosition.Y()/10<<" "<<Phot.FinalPosition.Z()/10<<std::endl;
-		    timeHist->Fill(fTime);
-		    distHist->Fill(fDist);
-		    
-		  } 
-               //  fLookupTime[fOpChannel][fEventID-1].push_back(fTime) ;
-               //  fLookupDist[fOpChannel][fEventID-1].push_back(fDist) ;
+                          //std::cout<<"Adding to the vector of vector...etc.  "<<std::endl;
+		          //std::cout<<"fOpChannel: "<<fOpChannel<<"\n";
+                          if(fMakeTimeTree)
+		          {	
+		            //Get distance of start point from point located on OpDet and convert
+		            //mm to cm (LArG4)
+		            fDist = 0.0333564*0.1*pow(pow(Phot.InitialPosition.X() - Phot.FinalPosition.X(),2)
+			            + pow(Phot.InitialPosition.Y() - Phot.FinalPosition.Y(),2) 
+			    	    + pow(Phot.InitialPosition.Z() - Phot.FinalPosition.Z(),2),0.5);  
+                            printf("Init: (%f,%f,%f)\n",
+                              initialPhotonPosition[0],
+                              initialPhotonPosition[1],
+                              initialPhotonPosition[2]);
+                             printf("Fin: (%f,%f,%f)\n",
+                              finalPhotonPosition[0],
+                              finalPhotonPosition[1],
+                              finalPhotonPosition[2]);
+                             printf("Making histogram.  fEventID-1 = %d\n",fEventID-1);
+                             printf("Total voxels: %d\n",Voxels);
+                             timeHist[fOpChannel]->Fill(fTime);
+		             distHist[fOpChannel]->Fill(fDist);
+                            
+		          } 
+                          //  fLookupTime[fOpChannel][fEventID-1].push_back(fTime) ;
+                          //  fLookupDist[fOpChannel][fEventID-1].push_back(fDist) ;
 
-				 //std::cout<<"\nTime: "<<fTime<<", size while filling: ["<<fOpChannel<<"]["<<VoxID<<"] "<<fLookupTime[fOpChannel][VoxID].size();
-
-					}
+		        //std::cout<<"\nTime: "<<fTime<<", size while filling: ["<<fOpChannel<<"]["<<VoxID<<"] "<<fLookupTime[fOpChannel][VoxID].size();
+                        }
 
 		  }
 	      }
 	  
-	    if(fMakeTimeTree)
-		    {
-		    timeHist->Write();     // all objects from timeHists are written 
-		    distHist->Write();
-		    }
-	  	      
+	    if(fMakeTimeTree && (fEventID==Voxels))
+	    {
+              printf("We're on the last voxel, so fill 'dem histos!\n");
+	      timeHist[fOpChannel]->Write();     // all objects from timeHists are written 
+	      distHist[fOpChannel]->Write();
+	    }
+	  	    
 	    // If this is a library building job, fill relevant entry
 //	    art::ServiceHandle<phot::PhotonVisibilityService> pvs;
 	    if(pvs->IsBuildJob())
 	      {
-		int VoxID; double NProd;
+		//int VoxID; double NProd;
 		pvs->RetrieveLightProd(VoxID, NProd);
 		pvs->SetLibraryEntry(VoxID, fOpChannel, double(fCountOpDetDetected)/NProd);		
 	      }
