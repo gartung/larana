@@ -148,8 +148,8 @@ namespace opdet {
 
 
 	//Time Tree --ahack
-	  std::vector<std::vector<std::vector<float>>> fLookupTime ;
-	  std::vector<std::vector<std::vector<float>>> fLookupDist ;
+	  //std::vector<std::vector<std::vector<float>>> fLookupTime ;
+	  //std::vector<std::vector<std::vector<float>>> fLookupDist ;
 	  Int_t	fVoxel;
 	  Float_t fDist;
 
@@ -246,9 +246,8 @@ namespace opdet {
 	  sprintf(histname, "hTime_%i",i);
           timeHist[i] = new TH1F(histname,"",1500,0.,150.);
           printf("Initializing histogram %s\n",histname);
-          //timeHist[i].TH1F(histname,"",750,0.,150.);
 	  sprintf(histname, "hDist_%i",i);
-          distHist[i] = new TH1F(histname,"",1500,0.,150.);
+          distHist[i] = new TH1F(histname,"",1000,0.,10.);
           printf("Initializing histogram %s\n",histname);
         }
 	  
@@ -276,6 +275,7 @@ namespace opdet {
 	//Time --ahack
 	void SimPhotonCounter::clearVectors(int OpCh, int Voxels){
 
+          /*
 		fLookupTime.clear();
 		fLookupTime.resize(OpCh); 	
 
@@ -290,7 +290,8 @@ namespace opdet {
 			  fLookupDist[i][j].resize(0) ;
 		        }
                  }
-	}
+	*/
+        }
 
 
   void SimPhotonCounter::analyze(art::Event const& evt)
@@ -418,6 +419,9 @@ namespace opdet {
                     //std::cout<<"Calculating wavelength: ";
                     fWavelength= odresponse->wavelength(Phot.Energy);
 		    fTime= Phot.Time;
+                    
+                    std::cout << "Time: "<<fTime << " \n";
+                    
                     initialPhotonPosition = Phot.InitialPosition;	
                     finalPhotonPosition = Phot.FinalLocalPosition;
                     //std::cout<<fWavelength<<"  time = "<<fTime<<"\n";
@@ -443,17 +447,18 @@ namespace opdet {
 		          {	
 		            //Get distance of start point from point located on OpDet and convert
 		            //mm to cm (LArG4)
-		            fDist = 0.0333564*0.1*pow(pow(Phot.InitialPosition.X() - Phot.FinalPosition.X(),2)
-			            + pow(Phot.InitialPosition.Y() - Phot.FinalPosition.Y(),2) 
-			    	    + pow(Phot.InitialPosition.Z() - Phot.FinalPosition.Z(),2),0.5);  
-                            printf("Init: (%f,%f,%f)\n",
-                              initialPhotonPosition[0],
-                              initialPhotonPosition[1],
-                              initialPhotonPosition[2]);
-                             printf("Fin: (%f,%f,%f)\n",
-                              finalPhotonPosition[0],
-                              finalPhotonPosition[1],
-                              finalPhotonPosition[2]);
+		            fDist = 0.0333564*0.1*pow(
+                              pow(Phot.InitialPosition.X() - Phot.FinalPosition.X(),2)
+			      + pow(Phot.InitialPosition.Y() - Phot.FinalPosition.Y(),2) 
+			      + pow(Phot.InitialPosition.Z() - Phot.FinalPosition.Z(),2),0.5);  
+                            //printf("Init: (%f,%f,%f)\n",
+                            //  initialPhotonPosition[0],
+                            //  initialPhotonPosition[1],
+                            //  initialPhotonPosition[2]);
+                            // printf("Fin: (%f,%f,%f)\n",
+                            //  finalPhotonPosition[0],
+                            //  finalPhotonPosition[1],
+                            //  finalPhotonPosition[2]);
                              printf("Making histogram.  fEventID-1 = %d\n",fEventID-1);
                              printf("Total voxels: %d\n",Voxels);
                              timeHist[fOpChannel]->Fill(fTime);
