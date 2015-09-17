@@ -1,7 +1,12 @@
+// -*- mode: c++; c-basic-offset: 2; -*-
 // Ben Jones, MIT, 2013
 //
 // This module finds periods of time-localized activity
 // from the optical system, called Flashes.
+//
+// Modified to make it more detector agnostic
+// by Gleb Sinev, Duke, 2015
+//
 
 
 #ifndef OpFlashFinder_H
@@ -10,8 +15,9 @@
 // LArSoft includes
 #include "Geometry/Geometry.h"
 #include "Geometry/OpDetGeo.h"
-#include "OpticalDetectorData/OpticalRawDigit.h"
+#include "RawData/OpDetWaveform.h"
 #include "OpticalDetector/AlgoThreshold.h"
+#include "OpticalDetector/AlgoSiPM.h"
 #include "OpticalDetector/AlgoPedestal.h"
 #include "OpticalDetector/PulseRecoManager.h"
 #include "RecoBase/OpFlash.h"
@@ -31,6 +37,7 @@
 #include "art/Framework/Services/Registry/ServiceHandle.h"
 #include "art/Framework/Services/Optional/TFileService.h"
 #include "art/Framework/Services/Optional/TFileDirectory.h"
+#include "art/Utilities/Exception.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
 // ROOT includes
@@ -38,7 +45,6 @@
 // C++ Includes
 #include <map>
 #include <vector>
-#include <iostream>
 #include <cstring>
 #include <sstream>
 #include "math.h"
@@ -69,24 +75,28 @@ namespace opdet {
     // The parameters we'll read from the .fcl file.
     std::string fInputModule;              // Input tag for OpDet collection
     std::string fGenModule ;
-
+    std::vector< std::string > fInputLabels;
+    std::string fThreshAlgName;
+    std::set<unsigned int> fChannelMasks;
     
     pmtana::PulseRecoManager  fPulseRecoMgr;
-    pmtana::AlgoThreshold     fThreshAlg;
+    pmtana::PMTPulseRecoBase* fThreshAlg;
 
-    Int_t   fChannelMapMode;
-    Int_t   fBinWidth;
-    Float_t fFlashThreshold;
-    Float_t fHitThreshold;
-    Float_t fWidthTolerance;
+    Int_t    fBinWidth;
+    Float_t  fFlashThreshold;
+    Float_t  fHitThreshold;
+    Float_t  fWidthTolerance;
     Double_t fTrigCoinc;
+    Bool_t   fAreaToPE;
+    Float_t  fSPEArea;
     
 
     unsigned int fNplanes;
     unsigned int fNOpChannels;
+    unsigned int fMaxOpChannel;
    
     std::vector<double> fSPESize;
-    std::map<int, int>  fChannelMap;
+
   };
 
 
@@ -105,52 +115,68 @@ namespace opdet {
   //-----------------------------------------------------------------------
   // Constructor
   OpFlashFinder::OpFlashFinder(const fhicl::ParameterSet & pset):
-    fPulseRecoMgr(),
-    fThreshAlg()
+    fPulseRecoMgr()
   {
 
     reconfigure(pset);
+
+    // Initialize the hit finder
+    if      (fThreshAlgName == "Threshold") 
+              fThreshAlg = new pmtana::AlgoThreshold();
+    else if (fThreshAlgName == "SiPM") 
+              fThreshAlg = new pmtana::AlgoSiPM(
+                pset.get< fhicl::ParameterSet >("algo_threshold"));
+    else throw art::Exception(art::errors::UnimplementedFeature)
+                    << "Cannot find implementation for " 
+                    << fThreshAlgName << " algorithm.\n";   
 
     produces<std::vector< recob::OpFlash> >();
     produces<std::vector< recob::OpHit> >();
     produces<art::Assns<recob::OpFlash, recob::OpHit> >();
 
-    fPulseRecoMgr.AddRecoAlgo(&fThreshAlg);
+    fPulseRecoMgr.AddRecoAlgo(fThreshAlg);
     fPulseRecoMgr.SetPedAlgo(pmtana::kHEAD);
-
 
   }
 
-  //---------------------------------------------
-
+  //-----------------------------------------------------------------------
   void OpFlashFinder::reconfigure(fhicl::ParameterSet const& pset)
   {
+
     // Indicate that the Input Module comes from .fcl
     fInputModule    = pset.get<std::string>("InputModule");
     fGenModule      = pset.get<std::string>("GenModule");
-
-    fChannelMapMode = pset.get<int>          ("ChannelMapMode");
-
+    fInputLabels    = pset.get<std::vector<std::string> >("InputLabels");
+    fThreshAlgName  = pset.get< fhicl::ParameterSet >("algo_threshold").get< std::string >("HitFinder");
+      
+    for(auto const& ch : pset.get<std::vector<unsigned int> >("ChannelMasks",std::vector<unsigned int>()))
+      fChannelMasks.insert(ch);
+    
     fBinWidth       = pset.get<int>          ("BinWidth");
     fFlashThreshold = pset.get<float>        ("FlashThreshold");
     fWidthTolerance = pset.get<float>        ("WidthTolerance");
     fTrigCoinc      = pset.get<double>       ("TrigCoinc");
     fHitThreshold   = pset.get<float>        ("HitThreshold");
-    
+    fAreaToPE       = pset.get<bool>         ("AreaToPE");
+    fSPEArea        = pset.get<float>        ("SPEArea");
 
     art::ServiceHandle<geo::Geometry> geom;
-    fNOpChannels = geom->NOpChannels();
-    fNplanes     = geom->Nplanes();
+    fNOpChannels  = geom->NOpChannels();
+    fMaxOpChannel = geom->MaxOpChannel();
+    fNplanes      = geom->Nplanes();
     
     fSPESize     = GetSPEScales();
-    fChannelMap  = GetChannelMap();
 
   }
 
   //-----------------------------------------------------------------------
   // Destructor
   OpFlashFinder::~OpFlashFinder() 
-  {}
+  {
+  
+    delete fThreshAlg;
+
+  }
    
   //-----------------------------------------------------------------------
   void OpFlashFinder::beginJob()
@@ -160,18 +186,15 @@ namespace opdet {
   //-----------------------------------------------------------------------
   void OpFlashFinder::endJob()
   { 
-
   }
-
-
 
   //-----------------------------------------------------------------------
   void OpFlashFinder::produce(art::Event& evt) 
   {
 
     // These are the storage pointers we will put in the event
-    std::unique_ptr<std::vector< recob::OpHit > >   HitPtr (new std::vector<recob::OpHit >);
-    std::unique_ptr<std::vector< recob::OpFlash > > FlashPtr (new std::vector<recob::OpFlash >);
+    std::unique_ptr< std::vector< recob::OpHit > >   HitPtr (new std::vector<recob::OpHit >);
+    std::unique_ptr< std::vector< recob::OpFlash > > FlashPtr (new std::vector<recob::OpFlash >);
     std::unique_ptr< art::Assns<recob::OpFlash, recob::OpHit > >  AssnPtr( new art::Assns<recob::OpFlash, recob::OpHit>);
 
     // This will keep track of what flashes will assoc to what ophits
@@ -184,40 +207,58 @@ namespace opdet {
       if ( err.categoryCode() != art::errors::ProductNotFound ) throw;
     }
 
-    // Get the pulses from the event
-    art::Handle< std::vector< optdata::OpticalRawDigit > > wfHandle;
-    evt.getByLabel(fInputModule, wfHandle);
-    std::vector<optdata::OpticalRawDigit> const& WaveformVector(*wfHandle);
-
     art::ServiceHandle<geo::Geometry> GeometryHandle;
     geo::Geometry const& Geometry(*GeometryHandle);
 
     art::ServiceHandle<util::TimeService> ts_ptr;
     util::TimeService const& ts(*ts_ptr);
 
-    RunFlashFinder(WaveformVector,
-		   *HitPtr,
-		   *FlashPtr,
-		   AssocList,
-		   fBinWidth,
-		   fPulseRecoMgr,
-		   fThreshAlg,
-		   fChannelMap,
-		   Geometry,
-		   fHitThreshold,
-		   fFlashThreshold,
-		   fWidthTolerance,
-		   ts,
-		   fSPESize,
-		   fTrigCoinc);
+    //
+    // Get the pulses from the event
+    //
 
+    // Reserve a large enough array
+    int totalsize = 0;
+    for ( auto label : fInputLabels) {
+      art::Handle< std::vector< raw::OpDetWaveform > > wfHandle;
+      evt.getByLabel(fInputModule, label, wfHandle);
+      if (!wfHandle.isValid()) continue; // Skip non-existent collections
+      totalsize += wfHandle->size();
+    }
+
+    // Load pulses into WaveformVector
+    std::vector< raw::OpDetWaveform > WaveformVector;
+    WaveformVector.reserve(totalsize);
+    for ( auto label : fInputLabels) {
+      art::Handle< std::vector< raw::OpDetWaveform > > wfHandle;
+      evt.getByLabel(fInputModule, label, wfHandle);
+      if (!wfHandle.isValid()) continue; // Skip non-existent collections
+      //WaveformVector.insert(WaveformVector.end(), wfHandle->begin(), wfHandle->end());
+      for(auto const& wf : *wfHandle) {
+	if(fChannelMasks.find(wf.ChannelNumber()) != fChannelMasks.end()) continue;
+	WaveformVector.push_back(wf);
+      }
+    }
+
+    RunFlashFinder(WaveformVector,
+                   *HitPtr,
+                   *FlashPtr,
+                   AssocList,
+                   fBinWidth,
+                   fPulseRecoMgr,
+                   *fThreshAlg,
+                   Geometry,
+                   fHitThreshold,
+                   fFlashThreshold,
+                   fWidthTolerance,
+                   ts,
+                   fSPESize,
+                   fAreaToPE,
+                   fTrigCoinc);
 
     // Make the associations which we noted we need
     for(size_t i=0; i!=AssocList.size(); ++i)
-      for(size_t j=0; j!=AssocList.at(i).size(); ++j)
-	{
-	  util::CreateAssn(*this, evt, *(FlashPtr), *(HitPtr), *(AssnPtr.get()), AssocList[i][j], AssocList[i][j], i);
-	}
+      util::CreateAssn(*this, evt, *(AssnPtr.get()), i, AssocList[i].begin(), AssocList[i].end());
     
     // Store results into the event
     evt.put(std::move(FlashPtr));
@@ -227,84 +268,18 @@ namespace opdet {
   }
 
 
-  //--------------------------------------
-
-
+  //-----------------------------------------------------------------------
   std::vector<double> OpFlashFinder::GetSPEScales()
   {
     // This will eventually interface to some kind of gain service
-    //  or database.  For now all SPE scales are set to 20 ADC.
-  
-    return std::vector<double>(fNOpChannels,20);
+    // or database. For now all SPE scales are set to 20 ADC.
+    // Alternatively all SPE scales are set to fSPEArea 
+    // if hit area is used to calculate number of PEs.
+    
+    if (fAreaToPE) return std::vector<double>(fNOpChannels,fSPEArea);
+    else           return std::vector<double>(fMaxOpChannel+1,20); // temp fix while we work out the expeiment-agnostic service that provides this info.
   }
 
-  //-------------------------------------
-  std::map<int, int>  OpFlashFinder::GetChannelMap()
-  {
-    // This will eventually interface to a shaper map database
-    // For now just hacked in by hand.
-    // 
-    // Two modes at present:
-    //  Mode0 : direct map for MC, 1<->1, 2<->2, etc
-    //  Mode1 : shaper map as used in PMT pre-com
-    //
-    std::map<int,int> ReturnMap;
-
-    if(fChannelMapMode==0)
-      {
-	for(size_t i=0; i!=32; ++i)
-	  ReturnMap[i] = i;
-      }
-    else if(fChannelMapMode==1)
-      {
-	ReturnMap[0] = 5; 
-	ReturnMap[1] = 4;
-	ReturnMap[2] = 7;
-	ReturnMap[3] = 6;  
-	ReturnMap[4] = 2;
-	ReturnMap[5] = 1;
-	ReturnMap[6] = 0;
-	ReturnMap[7] = 3;
-	ReturnMap[8] = 13;
-	ReturnMap[9] = 12;
-	ReturnMap[10]= 15;
-	ReturnMap[11]= 14;
-	ReturnMap[12]= 10;
-	ReturnMap[13]= 9;
-	ReturnMap[14]= 8;
-	ReturnMap[15]= 11;
-	ReturnMap[16]= 21;
-	ReturnMap[17]= 20;
-	ReturnMap[18]= 23;
-	ReturnMap[19]= 22;
-	ReturnMap[20]= 18;
-	ReturnMap[21]= 17;
-	ReturnMap[22]= 16;
-	ReturnMap[23]= 19;
-	ReturnMap[24]= 29;
-	ReturnMap[25]= 28;
-	ReturnMap[26]= -1;  // eventually 31
-	ReturnMap[27]= -1;  // eventually 30
-	ReturnMap[28]= 26;
-	ReturnMap[29]= 25;
-	ReturnMap[30]= 24;
-	ReturnMap[31]= 27;
-	ReturnMap[32]= -1;
-	ReturnMap[33]= -1;
-	ReturnMap[34]= -1;
-	ReturnMap[35]= -1;
-	ReturnMap[36]= -1;
-	ReturnMap[37]= -1; // eventually paddle1
-	ReturnMap[38]= -1; // eventually paddle2
-	ReturnMap[39]= -1; // eventually paddle3
-	ReturnMap[40]= -1; // eventually paddle4
-      }
-    else
-      {
-	mf::LogError("OpFlashFinder") << "Error : Unknown channel map mode!";
-      }
-    return ReturnMap;
-  }
 
 
 } // namespace opdet

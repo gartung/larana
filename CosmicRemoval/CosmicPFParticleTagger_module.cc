@@ -81,8 +81,9 @@ cosmic::CosmicPFParticleTagger::CosmicPFParticleTagger(fhicl::ParameterSet const
     this->reconfigure(p);
 
     // Call appropriate Produces<>() functions here.
-    produces< std::vector<anab::CosmicTag> >();
-    produces< art::Assns<recob::Track, anab::CosmicTag> >();
+    produces< std::vector<anab::CosmicTag>>();
+    produces< art::Assns<recob::Track, anab::CosmicTag>>();
+    produces< art::Assns<recob::PFParticle, anab::CosmicTag>>();
 }
 
 cosmic::CosmicPFParticleTagger::~CosmicPFParticleTagger()
@@ -92,17 +93,32 @@ cosmic::CosmicPFParticleTagger::~CosmicPFParticleTagger()
 
 void cosmic::CosmicPFParticleTagger::produce(art::Event & evt)
 {
+    // Instatiate the output
+    std::unique_ptr< std::vector< anab::CosmicTag > >                  cosmicTagTrackVector(       new std::vector<anab::CosmicTag>                  );
+    std::unique_ptr< art::Assns<recob::Track,      anab::CosmicTag > > assnOutCosmicTagTrack(      new art::Assns<recob::Track,      anab::CosmicTag>);
+    std::unique_ptr< art::Assns<recob::PFParticle, anab::CosmicTag > > assnOutCosmicTagPFParticle( new art::Assns<recob::PFParticle, anab::CosmicTag>);
+    
     // Recover handle for PFParticles
     art::Handle<std::vector<recob::PFParticle> > pfParticleHandle;
     evt.getByLabel( fPFParticleModuleLabel, pfParticleHandle);
     
-    if (!pfParticleHandle.isValid()) return;
+    if (!pfParticleHandle.isValid())
+    {
+        evt.put( std::move(cosmicTagTrackVector) );
+        evt.put( std::move(assnOutCosmicTagTrack) );
+        return;
+    }
     
     // Recover the handle for the tracks
     art::Handle<std::vector<recob::Track> > trackHandle;
     evt.getByLabel( fTrackModuleLabel, trackHandle);
     
-    if (!trackHandle.isValid()) return;
+    if (!trackHandle.isValid())
+    {
+        evt.put( std::move(cosmicTagTrackVector) );
+        evt.put( std::move(assnOutCosmicTagTrack) );
+        return;
+    }
     
     // Recover handle for track <--> PFParticle associations
     art::Handle< art::Assns<recob::PFParticle, recob::Track> > pfPartToTrackHandle;
@@ -114,23 +130,29 @@ void cosmic::CosmicPFParticleTagger::produce(art::Event & evt)
     // and the hits
     art::FindManyP<recob::Hit>  hitsSpill(trackHandle, evt, fTrackModuleLabel);
     
-    // Instatiate the output
-    std::unique_ptr< std::vector< anab::CosmicTag > > cosmicTagTrackVector( new std::vector<anab::CosmicTag> );
-    std::unique_ptr< art::Assns<recob::Track, anab::CosmicTag > >    assnOutCosmicTagTrack( new art::Assns<recob::Track, anab::CosmicTag>);
-    
     // The outer loop is going to be over PFParticles
     for(size_t pfPartIdx = 0; pfPartIdx != pfParticleHandle->size(); pfPartIdx++)
     {
         art::Ptr<recob::PFParticle> pfParticle(pfParticleHandle, pfPartIdx);
         
-        // Require the PFParticle be a primary
-        if (!pfParticle->IsPrimary()) continue;
-        
         // Recover the track vector
         std::vector<art::Ptr<recob::Track> > trackVec = pfPartToTrackAssns.at(pfPartIdx);
         
         // Is there a track associated to this PFParticle?
-        if (trackVec.empty()) continue;
+        if (trackVec.empty())
+        {
+            // We need to make a null CosmicTag to store with this PFParticle to keep sequencing correct
+            std::vector<float> tempPt1, tempPt2;
+            tempPt1.push_back(-999);
+            tempPt1.push_back(-999);
+            tempPt1.push_back(-999);
+            tempPt2.push_back(-999);
+            tempPt2.push_back(-999);
+            tempPt2.push_back(-999);
+            cosmicTagTrackVector->emplace_back( tempPt1, tempPt2, 0., anab::CosmicTagID_t::kNotTagged);
+            util::CreateAssn(*this, evt, *cosmicTagTrackVector, pfParticle, *assnOutCosmicTagPFParticle);
+            continue;
+        }
         
         // Start the tagging process...
         int                    isCosmic =  0;
@@ -284,10 +306,16 @@ void cosmic::CosmicPFParticleTagger::produce(art::Event & evt)
         
             util::CreateAssn(*this, evt, *cosmicTagTrackVector, track, *assnOutCosmicTagTrack );
         }
+        
+        // Don't forget the association to the PFParticle
+        util::CreateAssn(*this, evt, *cosmicTagTrackVector, pfParticle, *assnOutCosmicTagPFParticle);
     }
     
-    evt.put( std::move(cosmicTagTrackVector) );
-    evt.put( std::move(assnOutCosmicTagTrack) );
+    evt.put( std::move(cosmicTagTrackVector)      );
+    evt.put( std::move(assnOutCosmicTagTrack)     );
+    evt.put( std::move(assnOutCosmicTagPFParticle));
+    
+    return;
 
 } // end of produce
 //////////////////////////////////////////////////////////////////////////////////////////////////////

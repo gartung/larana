@@ -1,0 +1,14 @@
+BEGIN_PROLOG
+
+standard_mctrutht0matching:
+{
+    module_type:              "MCTruthT0Matching"
+    TrackModuleLabel:         ""
+    ShowerModuleLabel:        ""
+#   TrackModuleLabel:         "track3d"
+
+}
+
+dune35t_mctrutht0matching:    @local::standard_mctrutht0matching
+
+END_PROLOG

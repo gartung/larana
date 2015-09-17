@@ -32,6 +32,7 @@ extern "C" {
 #include "RecoBase/SpacePoint.h"
 #include "RecoBase/Track.h"
 #include "AnalysisBase/Calorimetry.h"
+#include "AnalysisBase/T0.h"
 #include "Utilities/AssociationUtil.h"
 #include "Filters/ChannelFilter.h"
 #include "Geometry/PlaneGeo.h"
@@ -86,10 +87,11 @@ namespace calo {
     bool BeginsOnBoundary(art::Ptr<recob::Track> lar_track);
     bool EndsOnBoundary(art::Ptr<recob::Track> lar_track);
 
-    void GetPitch(art::Ptr<recob::Hit> hit, std::vector<double> trkx, std::vector<double> trky, std::vector<double> trkz, std::vector<double> trkw, std::vector<double> trkx0, double *xyz3d, double &pitch);
+    void GetPitch(art::Ptr<recob::Hit> hit, std::vector<double> trkx, std::vector<double> trky, std::vector<double> trkz, std::vector<double> trkw, std::vector<double> trkx0, double *xyz3d, double &pitch, double TickT0);
 
     std::string fTrackModuleLabel;
     std::string fSpacePointModuleLabel;
+    std::string fT0ModuleLabel;
     bool fMakeTree;
     bool fUseArea;
     CalorimetryAlg caloAlg;
@@ -164,6 +166,7 @@ namespace calo {
 calo::Calorimetry::Calorimetry(fhicl::ParameterSet const& pset)
   : fTrackModuleLabel(pset.get< std::string >("TrackModuleLabel")      ),
     fSpacePointModuleLabel (pset.get< std::string >("SpacePointModuleLabel")       ),
+    fT0ModuleLabel (pset.get< std::string >("T0ModuleLabel") ),
     fMakeTree(pset.get< bool >("MakeTree") ),
     fUseArea(pset.get< bool >("UseArea") ),
     caloAlg(pset.get< fhicl::ParameterSet >("CaloAlg"))
@@ -263,9 +266,10 @@ void calo::Calorimetry::produce(art::Event& evt)
 
   //art::FindManyP<recob::SpacePoint> fmsp(trackListHandle, evt, fTrackModuleLabel);
   art::FindManyP<recob::Hit>        fmht(trackListHandle, evt, fTrackModuleLabel);
+  art::FindManyP<anab::T0>          fmt0(trackListHandle, evt, fT0ModuleLabel);
 
   for(size_t trkIter = 0; trkIter < tracklist.size(); ++trkIter){   
-
+    //std::cout<<"!!!!!!NEW TRACK "<< int(trkIter) <<"!!!!!!!"<<std::endl;
     //fnhits3D = fmsp.at(trkIter).size();
     std::vector<double> larStart;
     std::vector<double> larEnd;
@@ -302,15 +306,24 @@ void calo::Calorimetry::produce(art::Event& evt)
     unsigned int wire    = 0;   //hit wire number 
     unsigned int plane   = 0;  //hit plane number
 
-    //get hits in each plane
+    
 
     std::vector< art::Ptr<recob::Hit> > allHits = fmht.at(trkIter);
+    double T0 =0;
+    double TickT0 =0;
+    if ( fmt0.isValid() ) {
+      std::vector< art::Ptr<anab::T0> > allT0 = fmt0.at(trkIter);
+      if ( allT0.size() ) T0 = allT0[0]->Time();
+      TickT0 = T0 / detprop->SamplingRate();    
+    }
+    
     std::vector< std::vector<unsigned int> > hits(nplanes);
+
     art::FindManyP<recob::SpacePoint> fmspts(allHits, evt, fSpacePointModuleLabel);
     for (size_t ah = 0; ah< allHits.size(); ++ah){
       hits[allHits[ah]->WireID().Plane].push_back(ah);
     }
-
+    //get hits in each plane
     for (size_t ipl = 0; ipl < nplanes; ++ipl){//loop over all wire planes
 
       geo::PlaneID planeID;//(cstat,tpc,ipl);
@@ -375,20 +388,20 @@ void calo::Calorimetry::produce(art::Event& evt)
 	std::vector< art::Ptr<recob::SpacePoint> > sptv = fmspts.at(hits[ipl][i]);
 	for (size_t j = 0; j < sptv.size(); ++j){
 	  
-	  double t = allHits[hits[ipl][i]]->PeakTime();
+	  double t = allHits[hits[ipl][i]]->PeakTime() - TickT0; // Want T0 here? Otherwise ticks to x is wrong?
 	  double x = detprop->ConvertTicksToX(t, allHits[hits[ipl][i]]->WireID().Plane, allHits[hits[ipl][i]]->WireID().TPC, allHits[hits[ipl][i]]->WireID().Cryostat);
 	  double w = allHits[hits[ipl][i]]->WireID().Wire;
-	  trkx.push_back(sptv[j]->XYZ()[0]);
+	  trkx.push_back(sptv[j]->XYZ()[0]-detprop->ConvertTicksToX(TickT0, allHits[hits[ipl][i]]->WireID().Plane, allHits[hits[ipl][i]]->WireID().TPC, allHits[hits[ipl][i]]->WireID().Cryostat));
 	  trky.push_back(sptv[j]->XYZ()[1]);
 	  trkz.push_back(sptv[j]->XYZ()[2]);
 	  trkw.push_back(w);
-	    trkx0.push_back(x);
+	  trkx0.push_back(x);
 	}
       }
       for (size_t ihit = 0; ihit < hits[ipl].size(); ++ihit){//loop over all hits on each wire plane
 
 	//std::cout<<ihit<<std::endl;
-
+	
 	if (!planeID.isValid){
 	  plane = allHits[hits[ipl][ihit]]->WireID().Plane;
 	  tpc   = allHits[hits[ipl][ihit]]->WireID().TPC;
@@ -400,7 +413,7 @@ void calo::Calorimetry::produce(art::Event& evt)
 	}
 
 	wire = allHits[hits[ipl][ihit]]->WireID().Wire;
-	time = allHits[hits[ipl][ihit]]->PeakTime() ;
+	time = allHits[hits[ipl][ihit]]->PeakTime(); // What about here? T0 
 	stime = allHits[hits[ipl][ihit]]->PeakTimeMinusRMS();
 	etime = allHits[hits[ipl][ihit]]->PeakTimePlusRMS();
 	
@@ -410,7 +423,7 @@ void calo::Calorimetry::produce(art::Event& evt)
 	//not all hits are associated with space points, the method uses neighboring spacepts to interpolate
 	double xyz3d[3];
 	double pitch;
-	GetPitch(allHits[hits[ipl][ihit]], trkx, trky, trkz, trkw, trkx0, xyz3d, pitch);
+	GetPitch(allHits[hits[ipl][ihit]], trkx, trky, trkz, trkw, trkx0, xyz3d, pitch, TickT0);
 
 	if (xyz3d[2]<-100) continue; //hit not on track
 	if (pitch<=0) pitch = fTrkPitch;
@@ -438,8 +451,8 @@ void calo::Calorimetry::produce(art::Event& evt)
 	double MIPs = charge;
 	double dQdx = MIPs/pitch;
 	double dEdx = 0;
-	if (fUseArea) dEdx = caloAlg.dEdx_AREA(allHits[hits[ipl][ihit]], pitch);
-	else dEdx = caloAlg.dEdx_AMP(allHits[hits[ipl][ihit]], pitch);
+	if (fUseArea) dEdx = caloAlg.dEdx_AREA(allHits[hits[ipl][ihit]], pitch, T0);
+	else dEdx = caloAlg.dEdx_AMP(allHits[hits[ipl][ihit]], pitch, T0);
 
 	Kin_En = Kin_En + dEdx * pitch;	
 
@@ -455,10 +468,12 @@ void calo::Calorimetry::produce(art::Event& evt)
 	fetime.push_back(etime);
 	fpitch.push_back(pitch);
 	TVector3 v(xyz3d[0],xyz3d[1],xyz3d[2]);
+	//std::cout << "Adding these positions to v and then fXYZ " << xyz3d[0] << " " << xyz3d[1] << " " << xyz3d[2] << "\n" <<std::endl;
 	fXYZ.push_back(v);
 	++fnsps;
       }
       if (!fnsps){
+	//std::cout << "Adding the aforementioned positions..." << std::endl;
 	calorimetrycol->push_back(anab::Calorimetry(util::kBogusD,
 						    vdEdx,
 						    vdQdx,
@@ -655,6 +670,7 @@ void calo::Calorimetry::produce(art::Event& evt)
 	  }
 	}
       }
+      //std::cout << "Adding at the end but still same fXYZ" << std::endl;
       calorimetrycol->push_back(anab::Calorimetry(Kin_En,
 						  vdEdx,
 						  vdQdx,
@@ -745,9 +761,11 @@ void calo::Calorimetry::ReadCaloTree(){
   }
 }
 
-void calo::Calorimetry::GetPitch(art::Ptr<recob::Hit> hit, std::vector<double> trkx, std::vector<double> trky, std::vector<double> trkz, std::vector<double> trkw, std::vector<double> trkx0, double *xyz3d, double &pitch){
+void calo::Calorimetry::GetPitch(art::Ptr<recob::Hit> hit, std::vector<double> trkx, std::vector<double> trky, std::vector<double> trkz, std::vector<double> trkw, std::vector<double> trkx0, double *xyz3d, double &pitch, double TickT0){
   //Get 3d coordinates and track pitch for each hit
   //Find 5 nearest space points and determine xyz and curvature->track pitch
+  
+  //std::cout << "Start of get pitch" << std::endl;
 
   // Get services
   art::ServiceHandle<geo::Geometry> geom;
@@ -760,13 +778,14 @@ void calo::Calorimetry::GetPitch(art::Ptr<recob::Hit> hit, std::vector<double> t
 
   double wire_pitch = geom->WirePitch(0,1,0);
 
-  double t0 = hit->PeakTime();
+  double t0 = hit->PeakTime() - TickT0;
   double x0 = dp->ConvertTicksToX(t0, hit->WireID().Plane, hit->WireID().TPC, hit->WireID().Cryostat);
   double w0 = hit->WireID().Wire;
 
   for (size_t i = 0; i<trkx.size(); ++i){
     double distance = pow((trkw[i]-w0)*wire_pitch,2)+pow(trkx0[i]-x0,2);
     if (distance>0) distance = sqrt(distance);
+    //std::cout << "Dis " << distance << ", sqaured " << distance*distance << " = " << wire_pitch*wire_pitch <<"("<<trkw[i]<<"-"<<w0<<")^2 + ("<<trkx0[i]<<"-"<<x0<<")^2"<<std::endl;
     sptmap.insert(std::pair<double,size_t>(distance,i));
     if (w0-trkw[i]>0) sptsignmap.insert(std::pair<size_t,int>(i,1));
     else sptsignmap.insert(std::pair<size_t,int>(i,-1));
@@ -788,7 +807,7 @@ void calo::Calorimetry::GetPitch(art::Ptr<recob::Hit> hit, std::vector<double> t
     xyz[0] = trkx[isp->second];
     xyz[1] = trky[isp->second];
     xyz[2] = trkz[isp->second];
-    
+        
     double distancesign = sptsignmap[isp->second];
     //std::cout<<np<<" "<<xyz[0]<<" "<<xyz[1]<<" "<<xyz[2]<<" "<<(*isp).first<<std::endl;
     if (np==0&&isp->first>30){//hit not on track
@@ -798,6 +817,7 @@ void calo::Calorimetry::GetPitch(art::Ptr<recob::Hit> hit, std::vector<double> t
       pitch = -1;
       return;
     }
+    //std::cout<<np<<" "<<xyz[0]<<" "<<xyz[1]<<" "<<xyz[2]<<" "<<(*isp).first<<" Plane " << hit->WireID().Plane << " TPC " << hit->WireID().TPC << std::endl;
     if (np<5) {
       vx.push_back(xyz[0]);
       vy.push_back(xyz[1]);
@@ -812,6 +832,7 @@ void calo::Calorimetry::GetPitch(art::Ptr<recob::Hit> hit, std::vector<double> t
   }
   //std::cout<<"np="<<np<<std::endl;
   if (np>=2){//at least two points
+    //std::cout << "At least 2 points.."<<std::endl;
     TGraph *xs = new TGraph(np,&vs[0],&vx[0]);
     //for (int i = 0; i<np; i++) std::cout<<i<<" "<<vs[i]<<" "<<vx[i]<<" "<<vy[i]<<" "<<vz[i]<<std::endl;
     try{
@@ -826,7 +847,7 @@ void calo::Calorimetry::GetPitch(art::Ptr<recob::Hit> hit, std::vector<double> t
       else pol = (TF1*) xs->GetFunction("pol1");
       xyz3d[0] = pol->Eval(0);
       kx = pol->GetParameter(1);
-      //std::cout<<xyz3d[0]<<" "<<kx<<std::endl;
+      //std::cout<<"X fit "<<xyz3d[0]<<" "<<kx<<std::endl;
     }
     catch(...){
       mf::LogWarning("Calorimetry::GetPitch") <<"Fitter failed";
@@ -846,7 +867,7 @@ void calo::Calorimetry::GetPitch(art::Ptr<recob::Hit> hit, std::vector<double> t
       else pol = (TF1*) ys->GetFunction("pol1");
       xyz3d[1] = pol->Eval(0);
       ky = pol->GetParameter(1);
-      //std::cout<<xyz3d[1]<<" "<<ky<<std::endl;
+      //std::cout<<"Y fit "<<xyz3d[1]<<" "<<ky<<std::endl;
     }
     catch(...){
       mf::LogWarning("Calorimetry::GetPitch") <<"Fitter failed";
@@ -866,7 +887,7 @@ void calo::Calorimetry::GetPitch(art::Ptr<recob::Hit> hit, std::vector<double> t
       else pol = (TF1*) zs->GetFunction("pol1");
       xyz3d[2] = pol->Eval(0);
       kz = pol->GetParameter(1);
-      //std::cout<<xyz3d[2]<<" "<<kz<<std::endl;
+      //std::cout<<"Z fit "<<xyz3d[2]<<" "<<kz<<std::endl;
     }
     catch(...){
       mf::LogWarning("Calorimetry::GetPitch") <<"Fitter failed";
@@ -899,7 +920,7 @@ void calo::Calorimetry::GetPitch(art::Ptr<recob::Hit> hit, std::vector<double> t
     if (cosgamma>0) pitch = wirePitch/cosgamma;   
 
   }
-
+  //std::cout << "At end of get pitch " << xyz3d[0] << " " << xyz3d[1] << " " << xyz3d[2] << " " << x0 << " " << std::endl;
 }
 
 

@@ -202,7 +202,7 @@ namespace opdet {
 
     std::vector<std::vector<double> > SummedPhotons(XSteps);
     for(size_t i=0; i!=XSteps; ++i)
-      SummedPhotons[i].resize(geom->NOpDet());
+      SummedPhotons[i].resize(geom->NOpDets());
     
     art::ServiceHandle<phot::PhotonVisibilityService> pvs;
 
@@ -271,7 +271,7 @@ namespace opdet {
       {
 	std::cout<<" ScanHypothesis() Sum of photons for this track for x offset : "  << i << std::endl;
 	std::cout<<" ScanHypothesis() TrackLength : "  << totalLength << std::endl;
-	for(size_t OpDet =0; OpDet!=geom->NOpDet();  OpDet++)
+	for(size_t OpDet =0; OpDet!=geom->NOpDets();  OpDet++)
 	  {
 	    std::cout<<" \t OpDet : "  << OpDet << " , total photons: " << SummedPhotons.at(i).at(OpDet) << std::endl;
 	  }
@@ -321,7 +321,7 @@ namespace opdet {
   std::vector<double> TrackPMTLHD::GetMIPHypotheses(trkf::BezierTrack* Btrack, double XOffset)
   {
     art::ServiceHandle<geo::Geometry> geom;
-    std::vector<double> ReturnVector(geom->NOpDet(),0);
+    std::vector<double> ReturnVector(geom->NOpDets(),0);
     
     art::ServiceHandle<phot::PhotonVisibilityService> pvs;
 
@@ -379,7 +379,7 @@ namespace opdet {
 
         
     art::ServiceHandle<geo::Geometry> geom;
-    size_t NOpDets = geom->NOpDet();
+    size_t NOpDets = geom->NOpDets();
     
     std::map<int, bool> OnBeamFlashes;
     

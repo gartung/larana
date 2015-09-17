@@ -31,8 +31,6 @@ set(CMAKE_MODULE_PATH $ENV{ART_DIR}/Modules
 include(CetCMakeEnv)
 cet_cmake_env()
 
-set_install_root()
-
 cet_set_compiler_flags(DIAGS CAUTIOUS
   WERROR
   NO_UNDEFINED
@@ -49,7 +47,8 @@ find_ups_product( larsim v1_00_00 )
 find_ups_product( larreco v1_00_00 )
 find_ups_product( nutools v1_00_00 )
 find_ups_product( art v1_09_00 )
-find_ups_product( cetbuildtools v3_10_00 )
+find_ups_product( artextensions v1_00_01 )
+find_ups_product( cetbuildtools v4_09_00 )
 find_ups_product( postgresql v9_1_5 )
 
 # macros for dictionary and simple_plugin
@@ -62,6 +61,7 @@ add_subdirectory(Calorimetry)
 add_subdirectory(OpticalDetector)
 add_subdirectory(ParticleIdentification)
 add_subdirectory(CosmicRemoval)
+add_subdirectory(T0Finder)
 
 # tests
 add_subdirectory(test)
