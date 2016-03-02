@@ -1,3 +1,4 @@
+#include "calorimetry.fcl"
 #include "pidalgorithms.fcl"
 BEGIN_PROLOG
 
@@ -14,6 +15,30 @@ standard_pidaanalyzer:
   module_type:      "PIDAAnalyzer"
   CaloModuleLabel:  "calo"
   PIDAAlg:          @local::standard_pidaalg
+}
+
+standard_profilepid:
+{
+  module_type:      "ProfilePID"
+  TrackModuleLabel: "tracks"
+
+  Mode:             0              # 0: create training pattern for tracks selected by Pdg, save data in PatternOutFile
+                                   # 1: appply the identification ...
+
+  Direction:        1              # use 1 to calculate dE/dx from starting vertex, like for e/gamma patterns
+                                   # use 0 to calculate dE/dx from the end point, like for stopping particles
+  MinDx:            0.1            # sum up hits that are below this threshold of assigned dx and produce single
+                                   # dE/dx-range point use the same value in both, preparation of training patterns
+                                   # and identification of particles using prepared pattern fits
+  MaxRange:         15.0           # length of a track (cm from start/end, depending on Direction) that is processed
+
+  Pdg:              11             # PDG code used to select data for training patterns (the module is checking MC
+                                   # truth to find particle matching given track, it is used *only* for preparation
+                                   # of training patterns)
+  PatternOutFile:   "pattern.dat"  # file name for training data, if Mode is 0 (create training pattern)
+
+  ProfilePIDAlg:    @local::standard_profilepatternpidalg
+  CalorimetryAlg:   @local::standard_calorimetryalgmc
 }
 
 END_PROLOG

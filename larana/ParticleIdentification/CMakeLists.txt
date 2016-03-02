@@ -2,10 +2,14 @@ include_directories ( ${PROJECT_SOURCE_DIR} )
 art_make( 
 	  
 	  LIB_LIBRARIES
-                        lardata_AnalysisBase
-			lardata_AnalysisAlg
-                        lardata_Utilities
-                        larcore_Geometry
+					larana_ParticleIdentification_profilepatterns
+                        	lardata_AnalysisBase
+					lardata_AnalysisAlg
+                        	lardata_Utilities
+				 	larsim_Simulation
+					larsim_MCCheater_BackTracker_service
+                        	larcore_Geometry
+					${SIMULATIONBASE}
                         ${ART_FRAMEWORK_CORE}
 			${ART_FRAMEWORK_PRINCIPAL}
 			${ART_FRAMEWORK_SERVICES_REGISTRY}
@@ -49,3 +53,4 @@ install_fhicl()
 install_source()
 
 add_subdirectory(scripts)
+add_subdirectory(profilepatterns)

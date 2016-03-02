@@ -17,4 +17,9 @@ standard_pidaalg:
   KDEBandwidths:    [ -1, 0.5, 1, 2, 3, 5 ]
 }
 
+standard_profilepatternpidalg:
+{
+  PatternFile:      "fit.xml"  # pattern fit description and coefficients
+}
+
 END_PROLOG
