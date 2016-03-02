@@ -22,8 +22,9 @@ standard_profilepid:
   module_type:      "ProfilePID"
   TrackModuleLabel: "tracks"
 
-  Mode:             0              # 0: create training pattern for tracks selected by Pdg, save data in PatternOutFile
-                                   # 1: appply the identification ...
+  Mode:             0              # 0: create training pattern for tracks selected by Pdg, save data in TTree
+                                   # 1: as above, but save data in PatternOutFile (text file)
+                                   # 2: appply the identification ...
 
   Direction:        1              # use 1 to calculate dE/dx from starting vertex, like for e/gamma patterns
                                    # use 0 to calculate dE/dx from the end point, like for stopping particles

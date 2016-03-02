@@ -36,11 +36,12 @@
 #include "lardata/RecoBase/PFParticle.h"
 
 #include "lardata/AnalysisAlg/CalorimetryAlg.h"
+#include "larana/ParticleIdentification/ProfilePatternPIDAlg.h"
 
 #include <functional>
 #include <fstream>
 
-#include "larana/ParticleIdentification/ProfilePatternPIDAlg.h"
+#include "TTree.h"
 
 namespace pid
 {
@@ -94,9 +95,11 @@ private:
 	std::map< size_t, std::vector< pid::bHitInfo >[3] > fTrk2InfoMap; // hits info sorted by views
 	std::map< size_t, double > fTrk2VtxDistMap; // first hit to start/end vertex distances
 
-	int fRunNum, fEventNum, fBestView;
+	int fRunNum, fEventNum, fBestView, fTrkIdx;
+	double fdEdx, fRange;
 
-	std::ofstream patternOutFile;
+	std::ofstream fPatternOutFile; // dQ/dx tree saved in Mode 1
+	TTree* fPatternsTree;          // dQ/dx file saved in Mode 0
 
 //  Parameters:
 	std::string           fTrackModuleLabel;
@@ -139,31 +142,57 @@ void pid::ProfilePID::reconfigure(fhicl::ParameterSet const & p)
 
 void pid::ProfilePID::beginJob()
 {
-	if (fMode == 0) patternOutFile.open(fPatternOutFileName, std::ofstream::out);
+	if (fMode == 1) fPatternOutFile.open(fPatternOutFileName, std::ofstream::out);
+
+	if (fMode == 0)
+	{
+		art::ServiceHandle<art::TFileService> tfs;
+		fPatternsTree = tfs->make<TTree>("ProfilePatterns", "dE/dx info");
+		fPatternsTree->Branch("fRunNum", &fRunNum, "fRunNum/I");
+		fPatternsTree->Branch("fEventNum", &fEventNum, "fEventNum/I");
+		fPatternsTree->Branch("fBestView", &fBestView, "fBestView/I");
+		fPatternsTree->Branch("fTrkIdx", &fTrkIdx, "fTrkIdx/I");
+		fPatternsTree->Branch("fdEdx", &fdEdx, "fdEdx/D");
+		fPatternsTree->Branch("fRange", &fRange, "fRange/D");
+	}
 }
 
 void pid::ProfilePID::endJob()
 {
-	if (fMode == 0) patternOutFile.close();
+	if (fMode == 1) fPatternOutFile.close();
 }
 
 void pid::ProfilePID::writeTrackInfo(size_t tidx, const std::vector< double > & dEdx, const std::vector< double > & range)
 {
-	if (fMode != 0) return; // only in mode 0: training pattern preparation
-
-	for (size_t i = 0; i < dEdx.size(); ++i)
+	switch (fMode)
 	{
-		patternOutFile
-			<< fRunNum << " " << fEventNum << " " << fBestView << " "
-			<< tidx << " " << dEdx[i] << " " << range[i]
-			<< std::endl;
+		case 0: // save dE/dx to TTree
+			for (size_t i = 0; i < dEdx.size(); ++i)
+			{
+				fTrkIdx = tidx; fdEdx = dEdx[i]; fRange = range[i];
+				fPatternsTree->Fill();
+			}
+			break;
+
+		case 1: // save dE/dx to text file
+			for (size_t i = 0; i < dEdx.size(); ++i)
+			{
+				fPatternOutFile
+					<< fRunNum << " " << fEventNum << " " << fBestView << " "
+					<< tidx << " " << dEdx[i] << " " << range[i]
+					<< std::endl;
+			}
+			break;
+
+		default: return; // save data for training pattern preparation only in modes 0 and 1
 	}
 }
 
 bool pid::ProfilePID::prepareEvent(art::Event const & evt)
 {
 	fRunNum = evt.run(); fEventNum = evt.event();
-	fBestView = -1;
+	fBestView = -1; fTrkIdx = -1;
+	fdEdx = -1.0; fRange = -1.0;
 
 	art::Handle< std::vector<recob::PFParticle> > pfpListHandle;
 	bool hasPfp = evt.getByLabel(fTrackModuleLabel, pfpListHandle);
@@ -201,18 +230,18 @@ bool pid::ProfilePID::prepareEvent(art::Event const & evt)
 					}
 				}
 				//else std::cout << "fDir:" << fDirection << " hasPfp:" << hasPfp << std::endl;
-				fTrk2VtxDistMap[t] = dvtx;
 
 				auto vhit = hitFromTrk.at(t);
 				auto vmeta = hitFromTrk.data(t);
-				if (fMode == 0) // select tracks by matched MC truth
+				if ((fMode == 0) || (fMode == 1)) // select tracks by matched MC truth
 				{
 					bool stopping;
 					double clean;
 					auto const & mcParticle = *getMCParticle(vhit, clean, stopping);
-					if ((mcParticle.PdgCode() != fPdg) || (clean < 0.85)) continue;
+					if (!stopping || (mcParticle.PdgCode() != fPdg) || (clean < 0.85)) continue;
 				}
 
+				fTrk2VtxDistMap[t] = dvtx;
 				for (size_t h = 0; h < vhit.size(); ++h)
 				{
 					size_t view = vhit[h]->WireID().Plane;
@@ -237,25 +266,25 @@ void pid::ProfilePID::analyze(art::Event const & evt)
 {
 	if (!prepareEvent(evt)) return;
 
-	std::cout << "selected " << fTrkListHandle->size() << " tracks" << std::endl;
-
-	for (size_t t = 0; t < fTrkListHandle->size(); t++)
+	std::cout << "ProfilePID: selected " << fTrk2InfoMap.size() << " tracks" << std::endl;
+	for (auto const & trkEntry : fTrk2InfoMap)
 	{
+		size_t t = trkEntry.first;
+		auto const & info = trkEntry.second;
 		//auto const & trk = (*fTrkListHandle)[t];
 
 		size_t nhits, maxhits = 0;
 		for (size_t v = 0; v < 3; ++v)
 		{
-			nhits = fTrk2InfoMap[t][v].size();
+			nhits = info[v].size();
 			if (nhits > maxhits) { maxhits = nhits; fBestView = v; }
 		}
 		if (fBestView < 0) continue;
 
 		std::vector< double > dEdx, range;
-		make_dEdx(dEdx, range, fTrk2InfoMap[t][fBestView], fTrk2VtxDistMap[t], fMaxRange);
+		make_dEdx(dEdx, range, info[fBestView], fTrk2VtxDistMap[t], fMaxRange);
 
-		if (fMode == 0) writeTrackInfo(t, dEdx, range);
-		else
+		if (fMode == 2) // apply PID
 		{
 			// map of PDG - probability(PID)
 			std::map< int, double > pidOutput = fProfilePIDAlg.run(dEdx, range);
@@ -263,6 +292,7 @@ void pid::ProfilePID::analyze(art::Event const & evt)
 			for (auto const & pid : pidOutput)
 				std::cout << "   pid:" << pid.first << " p=" << pid.second << std::endl;
 		}
+		else writeTrackInfo(t, dEdx, range); // save training patterns
 	}
 }
 
