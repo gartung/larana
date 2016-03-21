@@ -253,12 +253,12 @@ bool pid::ProfilePID::prepareEvent(art::Event const & evt)
 					size_t view = vhit[h]->WireID().Plane;
 					size_t idx = vmeta[h]->Index();
 					double tdrift = vhit[h]->PeakTime();
-					double dq = vhit[h]->SummedADC();
 					double dx = vmeta[h]->Dx();
 
-					double de = fCalorimetryAlg.dEdx_AREA(dq, tdrift, view);
+					double dq = fCalorimetryAlg.ElectronsFromADCArea(vhit[h]->Integral(), view);
+					dq *= fCalorimetryAlg.LifetimeCorrection(tdrift); // *** note: T0 = 0
 
-					fTrk2InfoMap[t][view].emplace_back(idx, dx, de);
+					fTrk2InfoMap[t][view].emplace_back(idx, dx, dq);
 				}
 				for (auto & hits : fTrk2InfoMap[t]) std::sort(hits.begin(), hits.end(), pid::bIndexLess());
 			}
