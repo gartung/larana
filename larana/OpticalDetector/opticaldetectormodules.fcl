@@ -171,23 +171,32 @@ standard_preco_manager:
 
 ###################################################################
 
+standard_ophit:
+{
+  module_type:    "OpHitFinder"
+  GenModule:      "generator"
+  InputModule:    "optreadout"
+  InputLabels:    [ "" ]
+  ChannelMasks:   []
+  HitThreshold:   0.2    # PE
+  AreaToPE:       false  # Use area to calculate number of PEs
+  SPEArea:        1330   # If AreaToPE is true, this number is 
+                         # used as single PE area (in ADC counts)
+  reco_man:       @local::standard_preco_manager
+  HitAlgoPset:    @local::standard_algo_threshold
+  PedAlgoPset:    @local::standard_algo_pedestal_edges
+}
+
+###################################################################
+
 standard_opflash:
 {
-   module_type:     "OpFlashFinder"
-   GenModule:       "generator"
-   InputModule:     "optreadout"
-   InputLabels:     [ "" ]
-   ChannelMasks:    []
-   BinWidth:        1   # us | Pulse finding parameters
-   FlashThreshold:  2   # PE
-   HitThreshold:    0.2 # PE
-   WidthTolerance:  0.5 # unitless 
-   TrigCoinc:       2.5 # in microseconds!
-   AreaToPE:        false # Use area to calculate number of PEs
-   SPEArea:         1330  # If AreaToPE is true, this number is used as single PE area (in ADC counts)
-   reco_man:        @local::standard_preco_manager
-   HitAlgoPset:     @local::standard_algo_threshold
-   PedAlgoPset:     @local::standard_algo_pedestal_edges
+  module_type:   "OpFlashFinder"
+  InputModule:   "ophit"
+  BinWidth:       1   # us | Pulse finding parameters
+  FlashThreshold: 2   # PE
+  WidthTolerance: 0.5 # unitless 
+  TrigCoinc:      2.5 # in microseconds!
 }
 
 ###################################################################
@@ -256,7 +265,7 @@ standard_opflashana:
 {
   module_type:            "OpFlashAna"
   OpFlashModuleLabel:     "opflash"  
-  OpHitModuleLabel:       "opflash"  
+  OpHitModuleLabel:       "ophit"  
   YMin:                    -50
   YMax:                    50
   ZMin:                    0
@@ -351,7 +360,7 @@ standard_opflashsimpleanamodule:
 {
     module_type: "OpFlashSimpleAna"
     OpFlashModuleLabel: "opflash"
-    OpHitModuleLabel:   "opflash"
+    OpHitModuleLabel:   "ophit"
     MakeOpDetPEHist:    "true"
 }
 
