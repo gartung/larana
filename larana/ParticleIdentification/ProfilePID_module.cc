@@ -174,7 +174,7 @@ void pid::ProfilePID::writeTrackInfo(size_t tidx, const std::vector< double > & 
 			}
 			break;
 
-		case 1: // save dE/dx to text file
+		case 1: // save dE/dx to ascii file
 			for (size_t i = 0; i < dEdx.size(); ++i)
 			{
 				fPatternOutFile
@@ -209,27 +209,33 @@ bool pid::ProfilePID::prepareEvent(art::Event const & evt)
 			for (size_t t = 0; t < hitFromTrk.size(); t++)
 			{
 				double dvtx = 0.0;
-				if (fDirection && hasPfp) // try to get the starting vertex (the way of searching may change...)
+				if (hasPfp)
 				{
-					auto const & trk = (*fTrkListHandle)[t];
-					auto pfps = pfpFromTrk.at(t);
-					if (!pfps.empty())
+					if (fDirection) // try to get the starting vertex (the way of searching may change...)
 					{
-						auto vtxs = vtxFromPfp.at(pfps.front().key());
-						if (!vtxs.empty())
+						auto const & trk = (*fTrkListHandle)[t];
+						auto pfps = pfpFromTrk.at(t);
+						if (!pfps.empty())
 						{
-							double vtxpos[3];
-							vtxs.front()->XYZ(vtxpos);
-							TVector3 vtx3d(vtxpos[0], vtxpos[1], vtxpos[2]);
-							dvtx = (vtx3d - trk.Vertex()).Mag();
+							auto vtxs = vtxFromPfp.at(pfps.front().key());
+							if (!vtxs.empty())
+							{
+								double vtxpos[3];
+								vtxs.front()->XYZ(vtxpos);
+								TVector3 vtx3d(vtxpos[0], vtxpos[1], vtxpos[2]);
+								dvtx = (vtx3d - trk.Vertex()).Mag();
 
-							std::cout << "pfp vtx:" << vtx3d.X() << " " << vtx3d.Y() << " " << vtx3d.Z() << std::endl;
-							std::cout << "trk vtx:" << trk.Vertex().X() << " " << trk.Vertex().Y() << " " << trk.Vertex().Z() << std::endl;
-							std::cout << "dvtx:" << dvtx << std::endl;
+								std::cout << "pfp vtx:" << vtx3d.X() << " " << vtx3d.Y() << " " << vtx3d.Z() << std::endl;
+								std::cout << "trk vtx:" << trk.Vertex().X() << " " << trk.Vertex().Y() << " " << trk.Vertex().Z() << std::endl;
+								std::cout << "dvtx:" << dvtx << std::endl;
+							}
 						}
 					}
+					else
+					{
+						//std::cout << "fDir:" << fDirection << " hasPfp:" << hasPfp << std::endl;
+					}
 				}
-				//else std::cout << "fDir:" << fDirection << " hasPfp:" << hasPfp << std::endl;
 
 				auto vhit = hitFromTrk.at(t);
 				auto vmeta = hitFromTrk.data(t);
