@@ -14,15 +14,19 @@ namespace pmtana {
     : PMTPulseRecoBase(name)
   {
 
-    _adc_thres    = pset.get< float >("ADCThreshold"   );
-    _min_width    = pset.get< float >("MinWidth"       );
-    _2nd_thres    = pset.get< float >("SecondThreshold");
-    _use_ped_algo = pset.get< bool  >("UsePedAlgo"     );
-    //_use_ped_rms  = pset.get< bool  >("UsePedRMS"      );
+    _use_ped_rms   = pset.get< bool  >("UsePedRMS");
+    if (_use_ped_rms) {
+      _rms_thres     = pset.get< float >("RMSThreshold"      );
+      _2nd_rms_thres = pset.get< float >("SecondRMSThreshold");
+    }
+    else {
+      _adc_thres     = pset.get< float >("ADCThreshold"      );
+      _2nd_adc_thres = pset.get< float >("SecondADCThreshold");
+    }
+    _min_width     = pset.get< float >("MinWidth"          );
+    _use_ped_algo  = pset.get< bool  >("UsePedAlgo"        );
 
     if (!_use_ped_algo) _pedestal = pset.get< float >("Pedestal");
-
-//    _nsigma = 5;
 
     Reset();
 
@@ -50,15 +54,19 @@ namespace pmtana {
     bool   first_found    = false;
     bool   record_hit     = false;
     int    counter        = 0;
-    //    double threshold    = (_2nd_thres > (_nsigma*_ped_rms) ? _2nd_thres 
-    //                                                    : (_nsigma*_ped_rms));
     double const pedestal = _use_ped_algo  ? 
                             // Use output of the first pedestal algorithm
                             ped_mean.at(0) :
                             _pedestal;
-    double threshold      = _adc_thres;
+    double threshold      = _use_ped_rms             ?
+                            // Use output of the first pedestal algorithm
+                            _rms_thres*ped_rms.at(0) :
+                            _adc_thres;
     threshold            += pedestal;
-    double pre_threshold  = _2nd_thres;
+    double pre_threshold  = _use_ped_rms             ?
+                            // Use output of the first pedestal algorithm
+                            _2nd_rms_thres*ped_rms.at(0) :
+                            _2nd_adc_thres;
     pre_threshold        += pedestal;
 
     Reset();

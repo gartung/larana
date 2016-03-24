@@ -62,11 +62,17 @@ standard_fifohistana:
 standard_algo_sipm:
 {
     Name:           "SiPM"
-    ADCThreshold:      13
-    MinWidth:          10
-    SecondThreshold:    1
-    UsePedAlgo:      true
-    Pedestal:        1500
+    UsePedRMS:      false
+    # If UsePedRMS is true, use following for threshold
+    RMSThreshold:       5 # In multiples of pedestal RMS
+    SecondRMSThreshold: 1 # In multiples of pedestal RMS
+    # Otherwise use these
+    ADCThreshold:      13 # In ADC counts
+    SecondADCThreshold: 1 # In ADC counts
+    MinWidth:          10 # In ticks
+    UsePedAlgo:     false
+    # If UsePedAlgo is false, use this variable as the pedestal value
+    Pedestal:        1500 # In ADC counts
 }
 
 standard_algo_threshold:

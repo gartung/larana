@@ -45,29 +45,26 @@ namespace pmtana {
                    pmtana::PedestalMean_t  const&,
                    pmtana::PedestalSigma_t const&);
     
-    // A variable holder for a user-defined absolute ADC threshold value
-    double _adc_thres;
+    // Use pedestal RMS from the pedestal algortihm 
+    // instead of ADC counts to set thresholds
+    bool _use_ped_rms;
+    
+    // A variable holder for a user-defined absolute threshold value
+    double _adc_thres; // In ADC counts
+    double _rms_thres; // In multiples of RMS
+    
+    // Start recording hit information after this threshold is reached
+    double _2nd_adc_thres; // In ADC counts
+    double _2nd_rms_thres; // In multiples of RMS
     
     // Minimum width for a hit to be recorded
     int _min_width;
     
-    // Start recording hit information after this threshold is reached
-    double _2nd_thres;
-    
-    // Use output from the pedestal algortihm
+    // Use the pedestal value from the pedestal algortihm
     bool _use_ped_algo;
-    
-    // Use pedestal RMS from the pedestal algortihm 
-    // instead of ADC counts to set thresholds
-    // (1 = 1 RMS if true, 1 ADC count otherwise)
-    //bool _use_ped_rms;
     
     // Use this pedestal value if _use_ped_algo is false
     double _pedestal;
-
-    // A variable holder for a multiplicative factor for the pedestal 
-    // standard deviation to define the threshold
-    //      double _nsigma;
 
   };
 
