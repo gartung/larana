@@ -65,6 +65,7 @@ standard_algo_sipm:
     ADCThreshold:      13
     MinWidth:          10
     SecondThreshold:    1
+    UsePedAlgo:      true
     Pedestal:        1500
 }
 

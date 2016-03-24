@@ -10,14 +10,17 @@
 namespace pmtana {
 
   //---------------------------------------------------------------------------
-  AlgoSiPM::AlgoSiPM(const fhicl::ParameterSet &pset,const std::string name)
+  AlgoSiPM::AlgoSiPM(fhicl::ParameterSet const& pset,std::string const name)
     : PMTPulseRecoBase(name)
   {
 
-    _adc_thres = pset.get< float >("ADCThreshold"   );
-    _min_width = pset.get< float >("MinWidth"       );
-    _2nd_thres = pset.get< float >("SecondThreshold");
-    _pedestal  = pset.get< float >("Pedestal"       );
+    _adc_thres    = pset.get< float >("ADCThreshold"   );
+    _min_width    = pset.get< float >("MinWidth"       );
+    _2nd_thres    = pset.get< float >("SecondThreshold");
+    _use_ped_algo = pset.get< bool  >("UsePedAlgo"     );
+    //_use_ped_rms  = pset.get< bool  >("UsePedRMS"      );
+
+    if (!_use_ped_algo) _pedestal = pset.get< float >("Pedestal");
 
 //    _nsigma = 5;
 
@@ -38,22 +41,25 @@ namespace pmtana {
   }
 
   //---------------------------------------------------------------------------
-  bool AlgoSiPM::RecoPulse( const pmtana::Waveform_t& wf,
-			    const pmtana::PedestalMean_t& ped_mean,
-			    const pmtana::PedestalSigma_t& ped_rms )
+  bool AlgoSiPM::RecoPulse(pmtana::Waveform_t      const& wf,
+                           pmtana::PedestalMean_t  const& ped_mean,
+                           pmtana::PedestalSigma_t const& ped_rms)
   {
     
-    bool   fire          = false;
-    bool   first_found   = false;
-    bool   record_hit    = false;
-    int    counter       = 0;
-    //    double threshold   = (_2nd_thres > (_nsigma*_ped_rms) ? _2nd_thres 
+    bool   fire           = false;
+    bool   first_found    = false;
+    bool   record_hit     = false;
+    int    counter        = 0;
+    //    double threshold    = (_2nd_thres > (_nsigma*_ped_rms) ? _2nd_thres 
     //                                                    : (_nsigma*_ped_rms));
-    double pedestal      = _pedestal;
-    double threshold     = _adc_thres;
-    threshold           += pedestal;
-    double pre_threshold = _2nd_thres;
-    pre_threshold       += pedestal;
+    double const pedestal = _use_ped_algo  ? 
+                            // Use output of the first pedestal algorithm
+                            ped_mean.at(0) :
+                            _pedestal;
+    double threshold      = _adc_thres;
+    threshold            += pedestal;
+    double pre_threshold  = _2nd_thres;
+    pre_threshold        += pedestal;
 
     Reset();
 
