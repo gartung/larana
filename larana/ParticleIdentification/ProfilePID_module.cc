@@ -3,7 +3,7 @@
 // Module Type: analyzer
 // File:        ProfilePID_module.cc
 //
-// Author:      Robert Sulej, Feb.8 2016
+// Author:      Robert Sulej, Feb.8 2016 and dorota.stefan@cern.ch
 //
 // Examples of using PID algorithm based on dE/dx patterns only. The
 // general purpose is to translate dE/dx sequence of any length into a
@@ -26,6 +26,7 @@
 #include "art/Framework/Services/Optional/TFileService.h"
 
 #include "larsim/MCCheater/BackTracker.h"
+#include "larsim/Simulation/LArG4Parameters.h"
 #include "larsim/Simulation/ParticleList.h"
 #include "SimulationBase/MCParticle.h"
 
@@ -40,6 +41,7 @@
 
 #include <functional>
 #include <fstream>
+#include <cmath>
 
 #include "TTree.h"
 
@@ -52,11 +54,12 @@ namespace pid
 
 struct pid::bHitInfo
 {
-	bHitInfo(size_t i, double x, double e) :
-		Index(i), dE(e), dx(x)
+	bHitInfo(size_t i, double x, double e, int w) :
+		Index(i), dE(e), dx(x), wire(w)
 	{ }
 	size_t Index;
 	double dE, dx;
+	int wire;
 };
 
 struct pid::bIndexLess :
@@ -79,17 +82,22 @@ public:
 
 	void reconfigure(fhicl::ParameterSet const & p) override;
 	void beginJob() override;
+	void beginRun(const art::Run& run) override;
 	void endJob() override;
 
 private:
 	void writeTrackInfo(size_t tidx, const std::vector< double > & dEdx, const std::vector< double > & range);
 	bool prepareEvent(art::Event const & evt);
 
+	bool has(const std::vector<int>& v, int i) const;
+
+	bool evselect(art::Event const & evt) const;
+
 	void make_dEdx(std::vector< double > & dEdx, std::vector< double > & range,
 		const std::vector< pid::bHitInfo > & hits, double dvtx, double rmax) const;
 
-	simb::MCParticle const * getMCParticle(const std::vector< art::Ptr<recob::Hit> >& trkHits, 
-					double& clean, bool& stopping) const;
+	//simb::MCParticle const * getMCParticle(const std::vector< art::Ptr<recob::Hit> >& trkHits, 
+	//				double& clean, bool& stopping) const;
 
 	art::Handle< std::vector<recob::Track> > fTrkListHandle;
 	std::map< size_t, std::vector< pid::bHitInfo >[3] > fTrk2InfoMap; // hits info sorted by views
@@ -98,22 +106,28 @@ private:
 	int fRunNum, fEventNum, fBestView, fTrkIdx;
 	double fdEdx, fRange;
 
+	double fElectronsToGeV;
+
 	std::ofstream fPatternOutFile; // dQ/dx tree saved in Mode 1
 	TTree* fPatternsTree;          // dQ/dx file saved in Mode 0
 
 //  Parameters:
 	std::string           fTrackModuleLabel;
+	std::string						fSimulationLabel;
 	calo::CalorimetryAlg  fCalorimetryAlg;
 	ProfilePatternPIDAlg  fProfilePIDAlg;
 
 	std::string           fPatternOutFileName;
 
 	int                   fDirection;
+	int										fFlip;
 	double                fMinDx;
 	double                fMaxRange;
 
-	int                   fPdg;
+	std::vector<int>      fPdg;
 	int                   fMode;
+	bool 									fStopping;
+	bool									fDecaying;
 };
 
 
@@ -126,6 +140,7 @@ pid::ProfilePID::ProfilePID(fhicl::ParameterSet const & p) : EDAnalyzer(p),
 
 void pid::ProfilePID::reconfigure(fhicl::ParameterSet const & p)
 {
+	fSimulationLabel = p.get<std::string>("SimulationLabel");
 	fTrackModuleLabel = p.get<std::string>("TrackModuleLabel");
 	fCalorimetryAlg.reconfigure(p.get< fhicl::ParameterSet >("CalorimetryAlg"));
 	fProfilePIDAlg.reconfigure(p.get<fhicl::ParameterSet>("ProfilePIDAlg"));
@@ -136,8 +151,12 @@ void pid::ProfilePID::reconfigure(fhicl::ParameterSet const & p)
 	fMinDx = p.get<double>("MinDx");
 	fMaxRange = p.get<double>("MaxRange");
 
-	fPdg = p.get<int>("Pdg");
+	fPdg = p.get< std::vector<int> >("Pdg");
 	fMode = p.get<int>("Mode");
+	fStopping = p.get<bool>("Stopping");
+	fDecaying = p.get<bool>("Decaying");
+
+	fFlip = 0;
 }
 
 void pid::ProfilePID::beginJob()
@@ -160,6 +179,12 @@ void pid::ProfilePID::beginJob()
 void pid::ProfilePID::endJob()
 {
 	if (fMode == 1) fPatternOutFile.close();
+}
+
+void pid::ProfilePID::beginRun(const art::Run&)
+{
+	art::ServiceHandle<sim::LArG4Parameters> larParameters;
+	fElectronsToGeV = 1./larParameters->GeVToElectrons();
 }
 
 void pid::ProfilePID::writeTrackInfo(size_t tidx, const std::vector< double > & dEdx, const std::vector< double > & range)
@@ -188,11 +213,76 @@ void pid::ProfilePID::writeTrackInfo(size_t tidx, const std::vector< double > & 
 	}
 }
 
+bool pid::ProfilePID::evselect(art::Event const & evt) const
+{
+	// select particle based on monte carlo information
+	std::vector< art::Ptr<simb::MCParticle> > simlist;
+
+	art::Handle< std::vector<simb::MCParticle> > mcparticleHandle;
+	if (evt.getByLabel(fSimulationLabel, mcparticleHandle))
+		art::fill_ptr_vector(simlist, mcparticleHandle);
+
+	std::map< int, const simb::MCParticle* > particleMap;
+	for (auto const& particle : simlist)
+	{
+		particleMap[particle->TrackId()] = &*particle;
+	}
+
+	int simpdg = particleMap.begin()->second->PdgCode();
+	if (fStopping)
+	{
+		if ((simpdg == 2212) 
+			&& has(fPdg, simpdg) 
+			&& (particleMap.size() == 1) 
+			&& (particleMap.begin()->second->EndProcess() != "ProtonInelastic")) 	
+		{
+			return true; 
+		}
+	}
+
+	if (fDecaying)
+	{
+		bool kaonmodedcy = false;
+		if ((simpdg == 321) 
+			&& has(fPdg, simpdg)
+			&& (particleMap.begin()->second->EndProcess() == "Decay")
+			&& (particleMap.begin()->second->NumberDaughters() == 2)
+			&& (particleMap.size() == 6))
+		{ 	
+			size_t count = 0;
+			for (auto const & p : particleMap)
+			{
+				if ((p.second->PdgCode() == 321) ||
+						(p.second->PdgCode() == -13) ||
+						(p.second->PdgCode() == 14))
+				{
+					kaonmodedcy = true;
+				}
+
+				count++;
+				if (count == 3) break;
+			}
+
+				
+		}
+		else if ((simpdg == 221) && (particleMap.begin()->second->EndProcess() == "Decay"))
+		{	
+			return true; 
+		}	
+		
+		return kaonmodedcy;
+	}
+
+	return false;
+}
+
 bool pid::ProfilePID::prepareEvent(art::Event const & evt)
 {
 	fRunNum = evt.run(); fEventNum = evt.event();
 	fBestView = -1; fTrkIdx = -1;
 	fdEdx = -1.0; fRange = -1.0;
+
+	if (!evt.isRealData() && !evselect(evt)) return false;
 
 	art::Handle< std::vector<recob::PFParticle> > pfpListHandle;
 	bool hasPfp = evt.getByLabel(fTrackModuleLabel, pfpListHandle);
@@ -206,15 +296,29 @@ bool pid::ProfilePID::prepareEvent(art::Event const & evt)
 		art::FindManyP< recob::Vertex > vtxFromPfp(pfpListHandle, evt, fTrackModuleLabel);
 		if (hitFromTrk.size())
 		{
+		
+			/// choose the index of the interesitng track
+			size_t id = 0; int minz = 300;
 			for (size_t t = 0; t < hitFromTrk.size(); t++)
 			{
+				auto const & trk = (*fTrkListHandle)[t];
+				if (trk.End().Z() < minz) 
+				{
+					minz = trk.End().Z(); id = t;
+				}
+				if (trk.Vertex().Z() < minz)
+				{
+					minz = trk.Vertex().Z(); id = t;
+				}
+			}
+
 				double dvtx = 0.0;
 				if (hasPfp)
 				{
 					if (fDirection) // try to get the starting vertex (the way of searching may change...)
 					{
-						auto const & trk = (*fTrkListHandle)[t];
-						auto pfps = pfpFromTrk.at(t);
+						auto const & trk = (*fTrkListHandle)[id];
+						auto pfps = pfpFromTrk.at(id);
 						if (!pfps.empty())
 						{
 							auto vtxs = vtxFromPfp.at(pfps.front().key());
@@ -223,56 +327,65 @@ bool pid::ProfilePID::prepareEvent(art::Event const & evt)
 								double vtxpos[3];
 								vtxs.front()->XYZ(vtxpos);
 								TVector3 vtx3d(vtxpos[0], vtxpos[1], vtxpos[2]);
-								dvtx = (vtx3d - trk.Vertex()).Mag();
-
-								std::cout << "pfp vtx:" << vtx3d.X() << " " << vtx3d.Y() << " " << vtx3d.Z() << std::endl;
-								std::cout << "trk vtx:" << trk.Vertex().X() << " " << trk.Vertex().Y() << " " << trk.Vertex().Z() << std::endl;
-								std::cout << "dvtx:" << dvtx << std::endl;
+								dvtx = (vtx3d - trk.Vertex()).Mag();							
 							}
 						}
 					}
 					else
 					{
-						//std::cout << "fDir:" << fDirection << " hasPfp:" << hasPfp << std::endl;
+						
+						auto const & trk = (*fTrkListHandle)[id];
+						auto pfps = pfpFromTrk.at(id);
+						
+						if (!pfps.empty())
+						{
+							
+						}
+
+						if (trk.End().Z() < trk.Vertex().Z()) fFlip = 1;
+						
+						if ((trk.End().Z() > 1.0) && (trk.End().Z() > 1.0)) return false;
 					}
 				}
 
-				auto vhit = hitFromTrk.at(t);
-				auto vmeta = hitFromTrk.data(t);
-				if ((fMode == 0) || (fMode == 1)) // select tracks by matched MC truth
-				{
-					bool stopping;
-					double clean;
-					auto const & mcParticle = *getMCParticle(vhit, clean, stopping);
-					if (!stopping || (mcParticle.PdgCode() != fPdg) || (clean < 0.85)) continue;
-				}
+				auto vhit = hitFromTrk.at(id);
+				auto vmeta = hitFromTrk.data(id);
 
-				fTrk2VtxDistMap[t] = dvtx;
+				fTrk2VtxDistMap[id] = dvtx;
+				
 				for (size_t h = 0; h < vhit.size(); ++h)
 				{
 					size_t view = vhit[h]->WireID().Plane;
+
+					if (view != geo::kZ) continue;					
+
 					size_t idx = vmeta[h]->Index();
 					double tdrift = vhit[h]->PeakTime();
 					double dx = vmeta[h]->Dx();
+					double dqadc = vhit[h]->Integral();
+					int wire = vhit[h]->WireID().Wire;
 
-					double dq = fCalorimetryAlg.ElectronsFromADCArea(vhit[h]->Integral(), view);
-					dq *= fCalorimetryAlg.LifetimeCorrection(tdrift); // *** note: T0 = 0
+					double dq = fCalorimetryAlg.ElectronsFromADCArea(dqadc, view);
+					dq *= fCalorimetryAlg.LifetimeCorrection(tdrift) * (fElectronsToGeV * 1000); // *** note: T0 = 0
 
-					fTrk2InfoMap[t][view].emplace_back(idx, dx, dq);
+					fTrk2InfoMap[id][view].emplace_back(idx, dx, dq, wire);
 				}
-				for (auto & hits : fTrk2InfoMap[t]) std::sort(hits.begin(), hits.end(), pid::bIndexLess());
-			}
 		}
 	}
 	if (fTrk2InfoMap.empty()) return false;
 	else return true;
 }
 
+bool pid::ProfilePID::has(const std::vector<int>& v, int i) const
+{
+	for (auto c : v) if (c == i) return true;
+  return false;
+}
+
 void pid::ProfilePID::analyze(art::Event const & evt)
 {
 	if (!prepareEvent(evt)) return;
 
-	std::cout << "ProfilePID: selected " << fTrk2InfoMap.size() << " tracks" << std::endl;
 	for (auto const & trkEntry : fTrk2InfoMap)
 	{
 		size_t t = trkEntry.first;
@@ -288,33 +401,31 @@ void pid::ProfilePID::analyze(art::Event const & evt)
 		if (fBestView < 0) continue;
 
 		std::vector< double > dEdx, range;
+	
 		make_dEdx(dEdx, range, info[fBestView], fTrk2VtxDistMap[t], fMaxRange);
 
 		if (fMode == 2) // apply PID
 		{
 			// map of PDG - probability(PID)
 			std::map< int, double > pidOutput = fProfilePIDAlg.run(dEdx, range);
-			std::cout << "track: " << t << " view:" << fBestView << std::endl;
-			for (auto const & pid : pidOutput)
-				std::cout << "   pid:" << pid.first << " p=" << pid.second << std::endl;
 		}
 		else writeTrackInfo(t, dEdx, range); // save training patterns
 	}
 }
 
 void pid::ProfilePID::make_dEdx(std::vector< double > & dEdx, std::vector< double > & range,
-	const std::vector< pid::bHitInfo > & hits, double dvtx, double rmax) const
+	const std::vector< pid::bHitInfo > & hits, double dvtx, double rmax) const // empty hits is not taken into account.
 {
 	dEdx.clear(); range.clear();
 
 	int i0, i1, di;
-	if (fDirection) { i0 = 0; i1 = hits.size(); di = 1; }
+	if (fDirection || fFlip) { i0 = 0; i1 = hits.size(); di = 1; }
 	else { i0 = hits.size() - 1; i1 = -1; di = -1; }
 
 	double de, dx, r0, r1 = 0.0, r = dvtx;
 	while ((i0 != i1) && (r < rmax))
 	{
-		dx = 0.0; de = 0.0;
+		dx = 0.0; de = 0.0; 
 		while ((i0 != i1) && (dx <= fMinDx))
 		{
 			de += hits[i0].dE;
@@ -334,7 +445,7 @@ void pid::ProfilePID::make_dEdx(std::vector< double > & dEdx, std::vector< doubl
 	}
 }
 
-simb::MCParticle const * pid::ProfilePID::getMCParticle(
+/*simb::MCParticle const * pid::ProfilePID::getMCParticle(
 	const std::vector< art::Ptr<recob::Hit> >& trkHits, double& clean, bool& stopping) const
 {
 	int id = 0;
@@ -362,6 +473,7 @@ simb::MCParticle const * pid::ProfilePID::getMCParticle(
 	else clean = 0.;
 
 	simb::MCParticle const * particle = bt->TrackIDToParticle(id);
+	stopping = true;
 	double ek = particle->EndE() - particle->Mass();
 
 	if ((ek < 0.001) || (particle->EndProcess() == "FastScintillation")) stopping = true;
@@ -373,6 +485,6 @@ simb::MCParticle const * pid::ProfilePID::getMCParticle(
 		<< std::endl;
 
 	return particle;
-}
+}*/
 
 DEFINE_ART_MODULE(pid::ProfilePID)
