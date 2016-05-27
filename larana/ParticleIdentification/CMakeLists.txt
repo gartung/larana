@@ -1,16 +1,13 @@
 include_directories ( ${PROJECT_SOURCE_DIR} )
 art_make( 
-	  
-	  LIB_LIBRARIES
-					larana_ParticleIdentification_profilepatterns
-                        	lardata_AnalysisBase
-					lardata_AnalysisAlg
-                        	lardata_Utilities
-				 	larsim_Simulation
-					larsim_MCCheater_BackTracker_service
-                        	larcore_Geometry
-					${SIMULATIONBASE}
-                        ${ART_FRAMEWORK_CORE}
+LIB_LIBRARIES
+			SimulationBase
+			larana_ParticleIdentification_profilepatterns
+      lardata_AnalysisBase
+			lardata_AnalysisAlg
+      lardata_Utilities
+      larcore_Geometry
+      ${ART_FRAMEWORK_CORE}
 			${ART_FRAMEWORK_PRINCIPAL}
 			${ART_FRAMEWORK_SERVICES_REGISTRY}
 			${ART_FRAMEWORK_SERVICES_BASIC}
@@ -19,22 +16,23 @@ art_make(
 			${ART_PERSISTENCY_COMMON}
 			${ART_PERSISTENCY_PROVENANCE}
 			${ART_UTILITIES}
-                        ${MF_MESSAGELOGGER}
-		        ${MF_UTILITIES}
-		        ${FHICLCPP}
-		        ${CETLIB}
-		        ${CLHEP}
-		        ${ROOT_BASIC_LIB_LIST}
+      ${MF_MESSAGELOGGER}
+		  ${MF_UTILITIES}
+		  ${FHICLCPP}
+		  ${CETLIB}
+		  ${CLHEP}
+		  ${ROOT_BASIC_LIB_LIST}
 			${ROOT_TMVA}
-                        ${Boost_SYSTEM_LIBRARY}
-          MODULE_LIBRARIES 
-	  		larana_ParticleIdentification
-                        lardata_RecoBase
-                        larcore_Geometry
-                        larcore_Geometry_Geometry_service
-                        lardata_AnalysisAlg
-                        lardata_AnalysisBase
-                        ${ART_FRAMEWORK_CORE}
+      ${Boost_SYSTEM_LIBRARY}
+MODULE_LIBRARIES 
+			SimulationBase
+	  	larana_ParticleIdentification
+			lardata_RecoBase
+			larcore_Geometry
+			larcore_Geometry_Geometry_service
+			lardata_AnalysisAlg
+			lardata_AnalysisBase
+			${ART_FRAMEWORK_CORE}
 			${ART_FRAMEWORK_PRINCIPAL}
 			${ART_FRAMEWORK_SERVICES_REGISTRY}
 			${ART_FRAMEWORK_SERVICES_BASIC}
@@ -44,7 +42,7 @@ art_make(
 			${ART_UTILITIES}
 			${MF_MESSAGELOGGER}
 			${MF_UTILITIES}
-	                ${FHICLCPP}
+			${FHICLCPP}
 			${CETLIB}
          )
 
