@@ -20,8 +20,11 @@ standard_pidaanalyzer:
 standard_profilepid:
 {
   module_type:      "ProfilePID"
-  TrackModuleLabel: "tracks"
+  
+	GenieGenModuleLabel: "generator"
 	SimulationLabel: "largeant"
+	ClusterModuleLabel: "clusters"
+	TrackModuleLabel: "tracks"
 
   Mode:             0              # 0: create training pattern for tracks selected by Pdg, save data in TTree
                                    # 1: as above, but save data in PatternOutFile (text file)
@@ -34,11 +37,14 @@ standard_profilepid:
                                    # and identification of particles using prepared pattern fits
   MaxRange:         15.0           # length of a track (cm from start/end, depending on Direction) that is processed
 
-  Pdg:              [2212]         # PDG code used to select data for training patterns (the module is checking MC
-                                   # truth to find particle matching given track, it is used *only* for preparation
-                                   # of training patterns)
-	Stopping:					true 					 # one of the choices to select data for training patterns
-	Decaying:					false					 # 
+	Pdg:							[11]					 # pdg code of particle used to compute dE/dx
+
+	Pdgnu:						12					 	 # neutrino PDG
+
+	Ncnu:							0							 # neutrino NC
+
+	Bestview:					2							 # view which is used for calorimetric studies.	
+
   PatternOutFile:   "pattern.dat"  # file name for training data, if Mode is 0 (create training pattern)
 
   ProfilePIDAlg:    @local::standard_profilepatternpidalg

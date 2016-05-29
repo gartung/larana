@@ -25,10 +25,10 @@
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "art/Framework/Services/Optional/TFileService.h"
 
-#include "larsim/MCCheater/BackTracker.h"
 #include "larsim/Simulation/LArG4Parameters.h"
 #include "larsim/Simulation/ParticleList.h"
 #include "SimulationBase/MCParticle.h"
+#include "SimulationBase/MCTruth.h"
 
 #include "lardata/RecoBase/Hit.h"
 #include "lardata/RecoBase/Track.h"
@@ -44,6 +44,7 @@
 #include <cmath>
 
 #include "TTree.h"
+#include "Math/GenVector/DisplacementVector3D.h"
 
 namespace pid
 {
@@ -89,30 +90,34 @@ private:
 	void writeTrackInfo(size_t tidx, const std::vector< double > & dEdx, const std::vector< double > & range);
 	bool prepareEvent(art::Event const & evt);
 
-	bool has(const std::vector<int>& v, int i) const;
+	bool evselect(art::Event const & evt);
 
-	bool evselect(art::Event const & evt) const;
+	bool has(const std::vector<int>& v, int i) const;
 
 	void make_dEdx(std::vector< double > & dEdx, std::vector< double > & range,
 		const std::vector< pid::bHitInfo > & hits, double dvtx, double rmax) const;
 
-	//simb::MCParticle const * getMCParticle(const std::vector< art::Ptr<recob::Hit> >& trkHits, 
-	//				double& clean, bool& stopping) const;
-
 	art::Handle< std::vector<recob::Track> > fTrkListHandle;
 	std::map< size_t, std::vector< pid::bHitInfo >[3] > fTrk2InfoMap; // hits info sorted by views
+	// position of vertices sorted by pfp
+	std::map< size_t, ROOT::Math::DisplacementVector3D< ROOT::Math::Cartesian3D<double> > > fPfp2VtxMap; 
 	std::map< size_t, double > fTrk2VtxDistMap; // first hit to start/end vertex distances
 
-	int fRunNum, fEventNum, fBestView, fTrkIdx;
+	ROOT::Math::DisplacementVector3D< ROOT::Math::Cartesian3D<double> > GetTheMostUpstream();
+
+	int fRunNum, fEventNum, fBestView, fTrkIdxminz, fTrkIdx;
 	double fdEdx, fRange;
 
 	double fElectronsToGeV;
+	double fT0;
 
 	std::ofstream fPatternOutFile; // dQ/dx tree saved in Mode 1
 	TTree* fPatternsTree;          // dQ/dx file saved in Mode 0
 
 //  Parameters:
 	std::string           fTrackModuleLabel;
+	std::string						fClusterModuleLabel;
+	std::string						fGenieGenModuleLabel;
 	std::string						fSimulationLabel;
 	calo::CalorimetryAlg  fCalorimetryAlg;
 	ProfilePatternPIDAlg  fProfilePIDAlg;
@@ -121,13 +126,14 @@ private:
 
 	int                   fDirection;
 	int										fFlip;
+	std::vector<int>			fPdg;
+	int										fPdgnu;
+	int 									fNcnu;
 	double                fMinDx;
 	double                fMaxRange;
 
-	std::vector<int>      fPdg;
 	int                   fMode;
-	bool 									fStopping;
-	bool									fDecaying;
+
 };
 
 
@@ -140,7 +146,9 @@ pid::ProfilePID::ProfilePID(fhicl::ParameterSet const & p) : EDAnalyzer(p),
 
 void pid::ProfilePID::reconfigure(fhicl::ParameterSet const & p)
 {
+	fGenieGenModuleLabel = p.get<std::string>("GenieGenModuleLabel");
 	fSimulationLabel = p.get<std::string>("SimulationLabel");
+	fClusterModuleLabel = p.get<std::string>("ClusterModuleLabel");
 	fTrackModuleLabel = p.get<std::string>("TrackModuleLabel");
 	fCalorimetryAlg.reconfigure(p.get< fhicl::ParameterSet >("CalorimetryAlg"));
 	fProfilePIDAlg.reconfigure(p.get<fhicl::ParameterSet>("ProfilePIDAlg"));
@@ -151,12 +159,17 @@ void pid::ProfilePID::reconfigure(fhicl::ParameterSet const & p)
 	fMinDx = p.get<double>("MinDx");
 	fMaxRange = p.get<double>("MaxRange");
 
-	fPdg = p.get< std::vector<int> >("Pdg");
 	fMode = p.get<int>("Mode");
-	fStopping = p.get<bool>("Stopping");
-	fDecaying = p.get<bool>("Decaying");
+
+	fPdg = p.get< std::vector<int> >("Pdg");
+	
+	fPdgnu = p.get<int>("Pdgnu");
+	fNcnu = p.get<int>("Ncnu");
+
+	fBestView = p.get<int>("Bestview");
 
 	fFlip = 0;
+	fT0 = 0;
 }
 
 void pid::ProfilePID::beginJob()
@@ -213,9 +226,9 @@ void pid::ProfilePID::writeTrackInfo(size_t tidx, const std::vector< double > & 
 	}
 }
 
-bool pid::ProfilePID::evselect(art::Event const & evt) const
+// select nu/interaction type
+bool pid::ProfilePID::evselect(art::Event const & evt) 
 {
-	// select particle based on monte carlo information
 	std::vector< art::Ptr<simb::MCParticle> > simlist;
 
 	art::Handle< std::vector<simb::MCParticle> > mcparticleHandle;
@@ -228,158 +241,122 @@ bool pid::ProfilePID::evselect(art::Event const & evt) const
 		particleMap[particle->TrackId()] = &*particle;
 	}
 
-	int simpdg = particleMap.begin()->second->PdgCode();
-	if (fStopping)
+	fT0 = particleMap.begin()->second->T();
+
+  art::Handle< std::vector<simb::MCTruth> > mctruthListHandle;
+  std::vector<art::Ptr<simb::MCTruth> > mclist;
+  if (evt.getByLabel(fGenieGenModuleLabel,mctruthListHandle))
+     art::fill_ptr_vector(mclist, mctruthListHandle);
+
+	if (!mclist.size()) { return false; }
+	
+	art::Ptr<simb::MCTruth> mctruth = mclist[0];
+	if (mctruth->Origin() == simb::kBeamNeutrino)
 	{
-		if ((simpdg == 2212) 
-			&& has(fPdg, simpdg) 
-			&& (particleMap.size() == 1) 
-			&& (particleMap.begin()->second->EndProcess() != "ProtonInelastic")) 	
+		if (fNcnu == mctruth->GetNeutrino().CCNC()) //cc 0 nc 1
 		{
-			return true; 
-		}
-	}
-
-	if (fDecaying)
-	{
-		bool kaonmodedcy = false;
-		if ((simpdg == 321) 
-			&& has(fPdg, simpdg)
-			&& (particleMap.begin()->second->EndProcess() == "Decay")
-			&& (particleMap.begin()->second->NumberDaughters() == 2)
-			&& (particleMap.size() == 6))
-		{ 	
-			size_t count = 0;
-			for (auto const & p : particleMap)
+			if (fNcnu) { return true; }
+			else
 			{
-				if ((p.second->PdgCode() == 321) ||
-						(p.second->PdgCode() == -13) ||
-						(p.second->PdgCode() == 14))
-				{
-					kaonmodedcy = true;
-				}
-
-				count++;
-				if (count == 3) break;
+					// nue 12
+					if (fPdgnu == mctruth->GetNeutrino().Nu().PdgCode()) { return true; }
+					else { return false; }
 			}
-
-				
 		}
-		else if ((simpdg == 221) && (particleMap.begin()->second->EndProcess() == "Decay"))
-		{	
-			return true; 
-		}	
-		
-		return kaonmodedcy;
+		else { return false; }
+	}
+	else { return false; }
+}
+
+ROOT::Math::DisplacementVector3D< ROOT::Math::Cartesian3D<double> > pid::ProfilePID::GetTheMostUpstream() 
+{
+	ROOT::Math::DisplacementVector3D< ROOT::Math::Cartesian3D<double> > pos = fPfp2VtxMap.begin()->second;
+
+	for (auto const& part : fPfp2VtxMap)
+	{
+		if (part.second.Z() < pos.Z())
+		{
+			pos = part.second;
+			fTrkIdxminz = part.first;
+		}		
 	}
 
-	return false;
+	return pos;	
 }
 
 bool pid::ProfilePID::prepareEvent(art::Event const & evt)
 {
 	fRunNum = evt.run(); fEventNum = evt.event();
-	fBestView = -1; fTrkIdx = -1;
+	fTrkIdx = -1; fTrkIdxminz = -1;
 	fdEdx = -1.0; fRange = -1.0;
 
-	if (!evt.isRealData() && !evselect(evt)) return false;
+	if (!evt.isRealData() && !evselect(evt)) { return false; }
 
 	art::Handle< std::vector<recob::PFParticle> > pfpListHandle;
-	bool hasPfp = evt.getByLabel(fTrackModuleLabel, pfpListHandle);
+	bool hasPfp = evt.getByLabel(fClusterModuleLabel, pfpListHandle);
+	bool hasTrk = evt.getByLabel(fTrackModuleLabel, fTrkListHandle); // recob::Track
 
+	if (!hasPfp) { return false; }
+	if (!hasTrk) { return false; }
+	
+	fPfp2VtxMap.clear();
 	fTrk2InfoMap.clear();
 	fTrk2VtxDistMap.clear();
-	if (evt.getByLabel(fTrackModuleLabel, fTrkListHandle))
+
+	art::FindManyP< recob::Hit, recob::TrackHitMeta > hitFromTrk(fTrkListHandle, evt, fTrackModuleLabel);
+	art::FindManyP< recob::PFParticle > pfpFromTrk(fTrkListHandle, evt, fTrackModuleLabel);
+	art::FindManyP< recob::Vertex > vtxFromPfp(pfpListHandle, evt, fClusterModuleLabel);
+
+	// fill fPfp2Vtx map
+	for (size_t p = 0; p < pfpFromTrk.size(); ++p)
 	{
-		art::FindManyP< recob::Hit, recob::TrackHitMeta > hitFromTrk(fTrkListHandle, evt, fTrackModuleLabel);
-		art::FindManyP< recob::PFParticle > pfpFromTrk(fTrkListHandle, evt, fTrackModuleLabel);
-		art::FindManyP< recob::Vertex > vtxFromPfp(pfpListHandle, evt, fTrackModuleLabel);
-		if (hitFromTrk.size())
+		auto pfps = pfpFromTrk.at(p);
+		if (!pfps.empty())
 		{
-		
-			/// choose the index of the interesitng track
-			size_t id = 0; int minz = 300;
-			for (size_t t = 0; t < hitFromTrk.size(); t++)
+			auto vtxs = vtxFromPfp.at(pfps.front().key());
+			if (!vtxs.empty() && has(fPdg, pfps.front()->PdgCode()))
 			{
-				auto const & trk = (*fTrkListHandle)[t];
-				if (trk.End().Z() < minz) 
-				{
-					minz = trk.End().Z(); id = t;
-				}
-				if (trk.Vertex().Z() < minz)
-				{
-					minz = trk.Vertex().Z(); id = t;
-				}
-			}
+				double vtxpos[3];
+				vtxs.front()->XYZ(vtxpos);
+				ROOT::Math::DisplacementVector3D< ROOT::Math::Cartesian3D<double> > pos(vtxpos[0], vtxpos[1], vtxpos[2]);
+				fPfp2VtxMap[p] = pos;
+			}						
+		}
+	}	
 
-				double dvtx = 0.0;
-				if (hasPfp)
-				{
-					if (fDirection) // try to get the starting vertex (the way of searching may change...)
-					{
-						auto const & trk = (*fTrkListHandle)[id];
-						auto pfps = pfpFromTrk.at(id);
-						if (!pfps.empty())
-						{
-							auto vtxs = vtxFromPfp.at(pfps.front().key());
-							if (!vtxs.empty())
-							{
-								double vtxpos[3];
-								vtxs.front()->XYZ(vtxpos);
-								TVector3 vtx3d(vtxpos[0], vtxpos[1], vtxpos[2]);
-								dvtx = (vtx3d - trk.Vertex()).Mag();							
-							}
-						}
-					}
-					else
-					{
-						
-						auto const & trk = (*fTrkListHandle)[id];
-						auto pfps = pfpFromTrk.at(id);
-						
-						if (!pfps.empty())
-						{
-							
-						}
+	if (!fPfp2VtxMap.size()) { return false; }
 
-						if (trk.End().Z() < trk.Vertex().Z()) fFlip = 1;
-						
-						if ((trk.End().Z() > 1.0) && (trk.End().Z() > 1.0)) return false;
-					}
-				}
-
-				auto vhit = hitFromTrk.at(id);
-				auto vmeta = hitFromTrk.data(id);
-
-				fTrk2VtxDistMap[id] = dvtx;
+	// fill fTrk2InfoMap
+	for (size_t t = 0; t < fTrkListHandle->size(); ++t)
+	{
+		auto vhit = hitFromTrk.at(t);
+		auto vmeta = hitFromTrk.data(t);
 				
-				for (size_t h = 0; h < vhit.size(); ++h)
-				{
-					size_t view = vhit[h]->WireID().Plane;
+		for (size_t h = 0; h < vhit.size(); ++h)
+		{
+			int view = vhit[h]->WireID().Plane;
 
-					if (view != geo::kZ) continue;					
+			if (view != fBestView) continue;					
 
-					size_t idx = vmeta[h]->Index();
-					double tdrift = vhit[h]->PeakTime();
-					double dx = vmeta[h]->Dx();
-					double dqadc = vhit[h]->Integral();
-					int wire = vhit[h]->WireID().Wire;
+			size_t idx = vmeta[h]->Index();
+			double tdrift = vhit[h]->PeakTime();
+			double dx = vmeta[h]->Dx();
+			double dqadc = vhit[h]->Integral();
+			int wire = vhit[h]->WireID().Wire;
 
-					double dq = fCalorimetryAlg.ElectronsFromADCArea(dqadc, view);
-					dq *= fCalorimetryAlg.LifetimeCorrection(tdrift) * (fElectronsToGeV * 1000); // *** note: T0 = 0
+			double dq = fCalorimetryAlg.ElectronsFromADCArea(dqadc, view);
+			dq *= fCalorimetryAlg.LifetimeCorrection(tdrift, fT0) * (fElectronsToGeV * 1000); // MeV
 
-					fTrk2InfoMap[id][view].emplace_back(idx, dx, dq, wire);
-				}
+			fTrk2InfoMap[t][view].emplace_back(idx, dx, dq, wire);
 		}
 	}
-	if (fTrk2InfoMap.empty()) return false;
-	else return true;
-}
 
-bool pid::ProfilePID::has(const std::vector<int>& v, int i) const
-{
-	for (auto c : v) if (c == i) return true;
-  return false;
+	if (!fTrk2InfoMap.size()) { return false; }
+
+	GetTheMostUpstream();
+	
+	if (fTrk2InfoMap.empty()) { return false; }
+	else { return true; }
 }
 
 void pid::ProfilePID::analyze(art::Event const & evt)
@@ -389,27 +366,23 @@ void pid::ProfilePID::analyze(art::Event const & evt)
 	for (auto const & trkEntry : fTrk2InfoMap)
 	{
 		size_t t = trkEntry.first;
-		auto const & info = trkEntry.second;
-		//auto const & trk = (*fTrkListHandle)[t];
-
-		size_t nhits, maxhits = 0;
-		for (size_t v = 0; v < 3; ++v)
-		{
-			nhits = info[v].size();
-			if (nhits > maxhits) { maxhits = nhits; fBestView = v; }
-		}
-		if (fBestView < 0) continue;
-
-		std::vector< double > dEdx, range;
 	
-		make_dEdx(dEdx, range, info[fBestView], fTrk2VtxDistMap[t], fMaxRange);
-
-		if (fMode == 2) // apply PID
+		if (int(t) == fTrkIdxminz)
 		{
-			// map of PDG - probability(PID)
-			std::map< int, double > pidOutput = fProfilePIDAlg.run(dEdx, range);
+
+			auto const & info = trkEntry.second;
+		
+			std::vector< double > dEdx, range;
+	
+			make_dEdx(dEdx, range, info[fBestView], fTrk2VtxDistMap[t], fMaxRange);
+
+			if (fMode == 2) // apply PID
+			{
+				// map of PDG - probability(PID)
+				std::map< int, double > pidOutput = fProfilePIDAlg.run(dEdx, range);
+			}
+			else { writeTrackInfo(t, dEdx, range); } // save training patterns
 		}
-		else writeTrackInfo(t, dEdx, range); // save training patterns
 	}
 }
 
@@ -445,46 +418,9 @@ void pid::ProfilePID::make_dEdx(std::vector< double > & dEdx, std::vector< doubl
 	}
 }
 
-/*simb::MCParticle const * pid::ProfilePID::getMCParticle(
-	const std::vector< art::Ptr<recob::Hit> >& trkHits, double& clean, bool& stopping) const
+bool pid::ProfilePID::has(const std::vector<int>& v, int i) const
 {
-	int id = 0;
-	art::ServiceHandle< cheat::BackTracker > bt;
-
-	std::map<int, double> trkide;
-	for (auto const & hit : trkHits)
-		for(auto const & ide : bt->HitToTrackID(hit))
-		{
-			trkide[ide.trackID] += ide.energy;
-		}
-	
-	double maxe = -1., tote = 0.;
-	for (auto const & entry : trkide)
-	{
-		tote += entry.second;
-		if ((entry.second) > maxe)
-		{
-			maxe = entry.second;
-			id = entry.first;
-		}
-	}
-
-	if (tote > 0.) clean = maxe / tote;
-	else clean = 0.;
-
-	simb::MCParticle const * particle = bt->TrackIDToParticle(id);
-	stopping = true;
-	double ek = particle->EndE() - particle->Mass();
-
-	if ((ek < 0.001) || (particle->EndProcess() == "FastScintillation")) stopping = true;
-	else stopping = false;
-
-	std::cout << particle->PdgCode() << " ek:" << ek
-		<< " process: " << particle->EndProcess()
-		<< " clean:" << clean << " stopping:" << stopping
-		<< std::endl;
-
-	return particle;
-}*/
-
+	for (auto c : v) if (c == i) return true;
+  return false;
+}
 DEFINE_ART_MODULE(pid::ProfilePID)
