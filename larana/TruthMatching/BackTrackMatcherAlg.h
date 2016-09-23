@@ -22,6 +22,7 @@
 
 //c++ includes
 #include <vector>
+#include <utility>
 
 namespace truthmatching {
   class BackTrackMatcherAlg;
@@ -35,26 +36,38 @@ class truthmatching::BackTrackMatcherAlg
 
     void setup(std::vector< art::Ptr<recob::Hit> > const& allhits); // setup every event before calling other methods
 
-    art::Ptr<recob::Track> getBestMatch(simb::MCParticle & mcparticle, 
+    art::Ptr<recob::Track> getBestMatch(simb::MCParticle const& mcparticle, 
                   std::vector< art::Ptr<recob::Track> > const& alltracks);
 
-    art::Ptr<recob::Track> getBestMatch(simb::MCParticle & mcparticle, 
+    art::Ptr<recob::Track> getBestMatch(simb::MCParticle const& mcparticle, 
                         std::vector< art::Ptr<recob::Track> > const& alltracks, 
                         float& hitEff, float& hitPur, // result diagnostic values
                         float& hitEnergyEff, float& hitEnergyPur); // result diagnostic values
 
-    std::vector<art::Ptr<recob::Cluster> > getMatchedClusters(simb::MCParticle & mcparticle, 
+    std::vector<art::Ptr<recob::Cluster> > getMatchedClusters(simb::MCParticle const& mcparticle, 
               std::vector< art::Ptr<recob::Cluster> > const& allclusters,
               std::vector<float>& hitEff, std::vector<float>& hitPur, // result diagnostic values
               std::vector<float>& hitEnergyEff, std::vector<float>& hitEnergyPur); // result diagnostic values
 
     std::vector<art::Ptr<recob::Hit> > getMatchedHits(simb::MCParticle const& mcparticle);
 
-    float getHitEnergyEfficiency(simb::MCParticle & mcparticle);
+    float getHitEnergyEfficiency(simb::MCParticle const& mcparticle);
 
   private:
+
+    std::pair<double,double> getHitEffPur(simb::MCParticle const& mcparticle,
+    				std::vector< art::Ptr<recob::Hit> > const& hits);
+
+    std::pair<double,double> getHitChargeEffPur(
+                simb::MCParticle const& mcparticle,
+				std::vector< art::Ptr<recob::Hit> > const& hits);
+    
+
+
     std::vector< art::Ptr<recob::Hit> > fAllHits;
     bool fIsSetup;
+    art::ServiceHandle<cheat::BackTracker> fBT; ///< the back tracker service
+    
 };
 
 #endif

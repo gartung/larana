@@ -9,8 +9,9 @@
 
 #include "BackTrackMatcherAlg.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
+#include <set>
 
-truthmatching::BackTrackMatcherAlg::BackTrackMatcherAlg(fhicl::ParameterSet const& pset): fAllHits(), fIsSetup(false)
+truthmatching::BackTrackMatcherAlg::BackTrackMatcherAlg(fhicl::ParameterSet const& pset): fAllHits(), fIsSetup(false), fBT()
 {
   return;
 } //end constructor
@@ -29,14 +30,14 @@ truthmatching::BackTrackMatcherAlg::setup(std::vector< art::Ptr<recob::Hit> > co
 }
 
 art::Ptr<recob::Track>
-truthmatching::BackTrackMatcherAlg::getBestMatch(simb::MCParticle & mcparticle, 
+truthmatching::BackTrackMatcherAlg::getBestMatch(simb::MCParticle const& mcparticle, 
                     std::vector< art::Ptr<recob::Track> > const& alltracks)
 {
   return art::Ptr<recob::Track>();
 }
 
 art::Ptr<recob::Track>
-truthmatching::BackTrackMatcherAlg::getBestMatch(simb::MCParticle & mcparticle, 
+truthmatching::BackTrackMatcherAlg::getBestMatch(simb::MCParticle const& mcparticle, 
                     std::vector< art::Ptr<recob::Track> > const& alltracks, 
                     float& hitEff, float& hitPur, // result diagnostic values
                     float& hitEnergyEff, float& hitEnergyPur) // result diagnostic values
@@ -46,7 +47,7 @@ truthmatching::BackTrackMatcherAlg::getBestMatch(simb::MCParticle & mcparticle,
 
 
 std::vector<art::Ptr<recob::Cluster> >
-truthmatching::BackTrackMatcherAlg::getMatchedClusters(simb::MCParticle & mcparticle, 
+truthmatching::BackTrackMatcherAlg::getMatchedClusters(simb::MCParticle const& mcparticle, 
                 std::vector< art::Ptr<recob::Cluster> > const& allclusters,
                 std::vector<float>& hitEff, std::vector<float>& hitPur, // result diagnostic values
                 std::vector<float>& hitEnergyEff, std::vector<float>& hitEnergyPur) // result diagnostic values
@@ -61,8 +62,38 @@ truthmatching::BackTrackMatcherAlg::getMatchedHits(simb::MCParticle const& mcpar
 }
 
 float 
-truthmatching::BackTrackMatcherAlg::getHitEnergyEfficiency(simb::MCParticle & mcparticle)
+truthmatching::BackTrackMatcherAlg::getHitEnergyEfficiency(simb::MCParticle const& mcparticle)
 {
   return -1.;
 }
 
+std::pair<double,double>
+truthmatching::BackTrackMatcherAlg::getHitEffPur(simb::MCParticle const& mcparticle,
+				std::vector< art::Ptr<recob::Hit> > const& hits)
+{
+    const geo::View_t view = hits[0]->View();
+    const int trackID = mcparticle.TrackId();
+    std::set<int> id;
+    id.insert(trackID);
+    
+    // use the cheat::BackTracker to find purity and efficiency for these hits
+    double purity     = fBT->HitCollectionPurity(id, hits);
+    double efficiency = fBT->HitCollectionEfficiency(id, hits, fAllHits, view);
+    return std::make_pair(purity,efficiency);
+}
+
+std::pair<double,double>
+truthmatching::BackTrackMatcherAlg::getHitChargeEffPur(
+                simb::MCParticle const& mcparticle,
+				std::vector< art::Ptr<recob::Hit> > const& hits)
+{
+    const geo::View_t view = hits[0]->View();
+    const int trackID = mcparticle.TrackId();
+    std::set<int> id;
+    id.insert(trackID);
+
+    // use the cheat::BackTracker to find purity and efficiency for these hits
+    double purity     = fBT->HitChargeCollectionPurity(id, hits);
+    double efficiency = fBT->HitChargeCollectionEfficiency(id, hits, fAllHits, view);
+    return std::make_pair(purity,efficiency);
+}
