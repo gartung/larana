@@ -13,12 +13,11 @@
 #include "fhiclcpp/ParameterSet.h"
 
 //LArSoft includes
-#include "larsim/MCCheater/BackTracker.h"
-#include "nusimdata/SimulationBase/MCParticle.h"
-#include "lardata/Utilities/AssociationUtil.h"
-#include "lardataobj/RecoBase/Hit.h"
-#include "lardataobj/RecoBase/Cluster.h"
-#include "lardataobj/RecoBase/Track.h"
+#include "nusimdata/SimulationBase/MCTrajectory.h"
+
+//ROOT includes
+#include "TLorentzVector.h"
+#include "TVector3.h"
 
 //c++ includes
 #include <vector>
@@ -138,7 +137,7 @@ class mctrue::TrajectoryInterpExtrapAlg
                 const TVector3& point1,
                 const TVector3& point2,
                 const TLorentzVector& momentum1,
-                const TLorentzVector& momentum2)
+                const TLorentzVector& momentum2);
     
 };
 
