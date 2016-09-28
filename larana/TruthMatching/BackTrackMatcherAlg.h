@@ -45,168 +45,138 @@ class mctrue::BackTrackMatcherAlg
     BackTrackMatcherAlg(fhicl::ParameterSet const& pset);
     void reconfigure(fhicl::ParameterSet const& pset);
 
+    /// Find best match MCParticle given recoObj based on N hits
+    /**
+     * Uses backtracker to find the MCParticle that best matches
+     * the given reco object based on hit purity i.e. the MCParticle
+     * that made the most hits that match to the recoobj.
+     */
+      template<typename T> inline
       const simb::MCParticle* getBestMatch(
-                art::Ptr<recob::Track> const track,
+                art::Ptr<T> const recoObj,
                 art::Event const& event);
 
-//    /// Find best match MCParticle given track based on N hits
-//    /**
-//     * Uses backtracker to find the MCParticle that best matches
-//     * the given track based on hit purity i.e. the MCParticle
-//     * that made the most hits that match to the track.
-//     *
-//     * allHits are all hits in the event.
-//     */
-//    const simb::MCParticle* getBestMatch(
-//                art::Ptr<recob::Track> const track,
-//                std::vector< art::Ptr<recob::Hit> > const& allHits);
-//
-//    /// Find best match MCParticle given track based on N hits, with diagnositc variables
-//    /**
-//     * Uses backtracker to find the MCParticle that best matches
-//     * the given track based on hit purity i.e. the MCParticle
-//     * that made the most hits that match to the track.
-//     *
-//     * allHits are all hits in the event.
-//     *
-//     * hitPur: the hit purity of the track-mcparticle match 
-//     *   will be put in the referenced variable. It is the 
-//     *   number of hits matched to both the track and mcparticle 
-//     *   divided by the number of hits matched to the track.
-//     *
-//     * hitEnergyPur: the charge purity of hits of the 
-//     *   track-mcparticle match will be put in the referenced 
-//     *   variable. It is the charge of all of the hits matched
-//     *   to both the track and mcparticle divided by the charge
-//     *   of the hits matched to the track.
-//     *
-//     * hitEff: the hit efficiency of the track-mcparticle match 
-//     *   will be put in the referenced variable. It is the 
-//     *   hits matched to both the track and mcparticle divided 
-//     *   by all mcparticle matched hits
-//     *
-//     * hitEnergyEff: the charge efficiency of hits of the 
-//     *   track-mcparticle match will be put in the referenced 
-//     *   variable. It is the charge of all of the
-//     *   hits matched to both the track and mcparticle divided 
-//     *   by the charge of all the mcparticle matched hits
-//     */
-//    art::Ptr<simb::MCParticle> getBestMatch(
-//                art::Ptr<recob::Track> const track,
-//                std::vector< art::Ptr<recob::Hit> > const& allHits,
-//                float& hitPur, float& hitEnergyPur,
-//                float& hitEff, float& hitEnergyEff);
-//
-//    /// Find best match MCParticle given track based on charge of hits
-//    /**
-//     * Uses backtracker to find the MCParticle that best matches
-//     * the given track based on hit charge purity i.e. the MCParticle
-//     * that made the most hit charge that match to the track.
-//     *
-//     * allHits are all hits in the event.
-//     */
-//    art::Ptr<simb::MCParticle> getBestMatchCharge(
-//                art::Ptr<recob::Track> const track,
-//                std::vector< art::Ptr<recob::Hit> > const& allHits);
-//
-//    /// Find best match MCParticle given track based on charge of hits, with diagnositc variables
-//    /**
-//     * Uses backtracker to find the MCParticle that best matches
-//     * the given track based on hit charge purity i.e. the MCParticle
-//     * that made the most hit charge that match to the track.
-//     *
-//     * allHits are all hits in the event.
-//     *
-//     * hitPur: the hit purity of the track-mcparticle match 
-//     *   will be put in the referenced variable. It is the 
-//     *   number of hits matched to both the track and mcparticle 
-//     *   divided by the number of hits matched to the track.
-//     *
-//     * hitEnergyPur: the charge purity of hits of the 
-//     *   track-mcparticle match will be put in the referenced 
-//     *   variable. It is the charge of all of the hits matched
-//     *   to both the track and mcparticle divided by the charge
-//     *   of the hits matched to the track.
-//     *
-//     * hitEff: the hit efficiency of the track-mcparticle match 
-//     *   will be put in the referenced variable. It is the 
-//     *   hits matched to both the track and mcparticle divided 
-//     *   by all mcparticle matched hits
-//     *
-//     * hitEnergyEff: the charge efficiency of hits of the 
-//     *   track-mcparticle match will be put in the referenced 
-//     *   variable. It is the charge of all of the
-//     *   hits matched to both the track and mcparticle divided 
-//     *   by the charge of all the mcparticle matched hits
-//     */
-//    art::Ptr<simb::MCParticle> getBestMatchCharge(
-//                art::Ptr<recob::Track> const track,
-//                std::vector< art::Ptr<recob::Hit> > const& allHits,
-//                float& hitPur, float& hitEnergyPur,
-//                float& hitEff, float& hitEnergyEff);
-//
-//    /// Find tracks that match the given MCParticle
-//    /**
-//     * Uses backtracker to find tracks that match the MCParticle
-//     * with hit purity greater than minHitPur and hit energy 
-//     * purity greater than minHitEnergyPur. The hit purity is
-//     * the number of hits matched to both the track and mcparticle
-//     * divided by the number of hits matched to the track. The
-//     * hit energy purity is the charge of the hits matched to both
-//     * the track and mcparticle divided by the charge of the hits
-//     * matched to the track.
-//     *
-//     * allHits are all hits in the event.
-//     *
-//     * hitEff: the hit efficiency of the track-mcparticle match 
-//     *   will be put in the referenced variable. It is the 
-//     *   hits matched to both the track and mcparticle divided 
-//     *   by all mcparticle matched hits
-//     *
-//     * hitEnergyEff: the charge efficiency of hits of the 
-//     *   track-mcparticle match will be put in the referenced 
-//     *   variable. It is the charge of all of the
-//     *   hits matched to both the track and mcparticle divided 
-//     *   by the charge of all the mcparticle matched hits
-//     */
-//    std::vector<art::Ptr<recob::Track> > getMatchedTracks(
-//                simb::MCParticle const& mcparticle, 
-//                std::vector< art::Ptr<recob::Track> > const& alltracks, 
-//                std::vector< art::Ptr<recob::Hit> > const& allHits,
-//                float minHitPur, float minHitEnergyPur,
-//                float& hitEff, float& hitEnergyEff);
-//
-//    /// Find clusters that match the given MCParticle
-//    /**
-//     * Uses backtracker to find clusters that match the MCParticle
-//     * with hit purity greater than minHitPur and hit energy 
-//     * purity greater than minHitEnergyPur. The hit purity is
-//     * the number of hits matched to both the cluster and mcparticle
-//     * divided by the number of hits matched to the cluster. The
-//     * hit energy purity is the charge of the hits matched to both
-//     * the cluster and mcparticle divided by the charge of the hits
-//     * matched to the cluster.
-//     *
-//     * allHits are all hits in the event.
-//     *
-//     * hitEff: the hit efficiency of the track-mcparticle match 
-//     *   will be put in the referenced variable. It is the 
-//     *   hits matched to both the cluster and mcparticle divided 
-//     *   by all mcparticle matched hits
-//     *
-//     * hitEnergyEff: the charge efficiency of hits of the 
-//     *   track-mcparticle match will be put in the referenced 
-//     *   variable. It is the charge of all of the
-//     *   hits matched to both the cluster and mcparticle divided 
-//     *   by the charge of all the mcparticle matched hits
-//     */
-//    std::vector<art::Ptr<recob::Cluster> > getMatchedClusters(
-//                simb::MCParticle const& mcparticle, 
-//                std::vector< art::Ptr<recob::Cluster> > const& allclusters,
-//                std::vector< art::Ptr<recob::Hit> > const& allHits,
-//                float minHitPur, float minHitEnergyPur,
-//                float& hitEff, float& hitEnergyEff);
-//
+    /// Find best match MCParticle given recoObj based on N hits, with diagnostic values
+    /**
+     * Uses backtracker to find the MCParticle that best matches
+     * the given reco object based on hit purity i.e. the MCParticle
+     * that made the most hits that match to the recoObj.
+     *
+     * hitPur: the hit purity of the recoObj-mcparticle match 
+     *   will be put in the referenced variable. It is the 
+     *   number of hits matched to both the recoOjb and mcparticle 
+     *   divided by the number of hits matched to the recoOjb.
+     *
+     * hitEnergyPur: the charge purity of hits of the 
+     *   recoObj-mcparticle match will be put in the referenced 
+     *   variable. It is the charge of all of the hits matched
+     *   to both the recoObj and mcparticle divided by the charge
+     *   of the hits matched to the recoObj.
+     *
+     * hitEff: the hit efficiency of the recoObj-mcparticle match 
+     *   will be put in the referenced variable. It is the 
+     *   hits matched to both the recoObj and mcparticle divided 
+     *   by all mcparticle matched hits
+     *
+     * hitEnergyEff: the charge efficiency of hits of the 
+     *   recoObj-mcparticle match will be put in the referenced 
+     *   variable. It is the charge of all of the
+     *   hits matched to both the recoObj and mcparticle divided 
+     *   by the charge of all the mcparticle matched hits
+     */
+      template<typename T> inline
+      const simb::MCParticle* getBestMatch(
+                art::Ptr<T> const recoObj,
+                art::Event const& event,
+                float& hitPur, float& hitEnergyPur,
+                float& hitEff, float& hitEnergyEff);
+
+    /// Find best match MCParticle given recoObj based on charge of hits
+    /**
+     * Uses backtracker to find the MCParticle that best matches
+     * the given reco object based on charge purity i.e. the MCParticle
+     * that made the most hit charge that match to the recoobj.
+     *
+     */
+      template<typename T> inline
+      const simb::MCParticle* getBestMatchCharge(
+                art::Ptr<T> const recoObj,
+                art::Event const& event);
+
+    /// Find best match MCParticle given recoObj based on charge of hits, with diagnostic values
+    /**
+     * Uses backtracker to find the MCParticle that best matches
+     * the given reco object based on charge purity i.e. the MCParticle
+     * that made the most hit charge that match to the recoobj.
+     *
+     * hitPur: the hit purity of the recoObj-mcparticle match 
+     *   will be put in the referenced variable. It is the 
+     *   number of hits matched to both the recoOjb and mcparticle 
+     *   divided by the number of hits matched to the recoOjb.
+     *
+     * hitEnergyPur: the charge purity of hits of the 
+     *   recoObj-mcparticle match will be put in the referenced 
+     *   variable. It is the charge of all of the hits matched
+     *   to both the recoObj and mcparticle divided by the charge
+     *   of the hits matched to the recoObj.
+     *
+     * hitEff: the hit efficiency of the recoObj-mcparticle match 
+     *   will be put in the referenced variable. It is the 
+     *   hits matched to both the recoObj and mcparticle divided 
+     *   by all mcparticle matched hits
+     *
+     * hitEnergyEff: the charge efficiency of hits of the 
+     *   recoObj-mcparticle match will be put in the referenced 
+     *   variable. It is the charge of all of the
+     *   hits matched to both the recoObj and mcparticle divided 
+     *   by the charge of all the mcparticle matched hits
+     */
+      template<typename T> inline
+      const simb::MCParticle* getBestMatchCharge(
+                art::Ptr<T> const recoObj,
+                art::Event const& event,
+                float& hitPur, float& hitEnergyPur,
+                float& hitEff, float& hitEnergyEff);
+
+    /// Find recoObjs that match the given MCParticle
+    /**
+     * Uses backtracker to find tracks that match the MCParticle
+     * with hit purity greater than minHitPur and hit energy 
+     * purity greater than minHitEnergyPur. The hit purity is
+     * the number of hits matched to both the track and mcparticle
+     * divided by the number of hits matched to the track. The
+     * hit energy purity is the charge of the hits matched to both
+     * the track and mcparticle divided by the charge of the hits
+     * matched to the track.
+     *
+     * allHits are all hits in the event.
+     *
+     * hitEff: the hit efficiency of the track-mcparticle match 
+     *   will be put in the referenced variable. It is the 
+     *   hits matched to both the track and mcparticle divided 
+     *   by all mcparticle matched hits
+     *
+     * hitEnergyEff: the charge efficiency of hits of the 
+     *   track-mcparticle match will be put in the referenced 
+     *   variable. It is the charge of all of the
+     *   hits matched to both the track and mcparticle divided 
+     *   by the charge of all the mcparticle matched hits
+     */
+      template<typename T> inline
+      std::vector<art::Ptr<T> > getMatched(
+                simb::MCParticle const& mcparticle, 
+                std::vector< art::Ptr<T> > const& recoObjs, 
+                art::Event const& event,
+                float minHitPur, float minHitEnergyPur);
+
+      template<typename T> inline
+      std::vector<art::Ptr<T> > getMatched(
+                simb::MCParticle const& mcparticle, 
+                std::vector< art::Ptr<T> > const& recoObjs, 
+                art::Event const& event,
+                float minHitPur, float minHitEnergyPur,
+                float& hitEff, float& hitEnergyEff);
+
 //    /// Find hits that match the given mcparticle
 //    /**
 //     * Uses backtracker to find hits that match the MCParticle
@@ -289,9 +259,123 @@ class mctrue::BackTrackMatcherAlg
             std::vector< art::Ptr<recob::Hit> > const& theseHits,
             bool charge);
 
+    /// Find indices of reco objs that match mcparticle, with diagnositc variables
+    /**
+     * Uses backtracker to find tracks that match  MCParticle that best matches
+     * with minimum hit and charge purity.
+     */
+    const std::vector<size_t> getMatchedSetsOfHits(
+                simb::MCParticle const& mcparticle, 
+                art::FindManyP<recob::Hit>& fmh,
+                float minHitPur, float minHitEnergyPur,
+                float& hitEff, float& hitEnergyEff);
+
     art::ServiceHandle<cheat::BackTracker> fBT; ///< the back tracker service
     art::InputTag fHitTag;
     
 };
+
+// Template Definitions
+
+template<typename T> inline
+const simb::MCParticle* 
+mctrue::BackTrackMatcherAlg::getBestMatch(
+          art::Ptr<T> const recoObj,
+          art::Event const& event)
+{
+  float hitPur=0; 
+  float hitEnergyPur=0;
+  float hitEff=0; 
+  float hitEnergyEff=0;
+  return getBestMatch(recoObj,event,hitPur,hitEnergyPur,hitEff,hitEnergyEff);
+}
+
+template<typename T> inline
+const simb::MCParticle* 
+mctrue::BackTrackMatcherAlg::getBestMatch(
+          art::Ptr<T> const recoObj,
+          art::Event const& event,
+          float& hitPur, float& hitEnergyPur,
+          float& hitEff, float& hitEnergyEff)
+{
+  art::FindManyP<recob::Hit> fmh({recoObj}, event, fHitTag);
+  const std::vector<art::Ptr<recob::Hit>> & hits = fmh.at(0);
+  return getBestMatchTheseHits(hits,false);
+}
+
+template<typename T> inline
+const simb::MCParticle* 
+mctrue::BackTrackMatcherAlg::getBestMatchCharge(
+          art::Ptr<T> const recoObj,
+          art::Event const& event)
+{
+  float hitPur=0; 
+  float hitEnergyPur=0;
+  float hitEff=0; 
+  float hitEnergyEff=0;
+  return getBestMatchCharge(recoObj,event,hitPur,hitEnergyPur,hitEff,hitEnergyEff);
+}
+
+template<typename T> inline
+const simb::MCParticle* 
+mctrue::BackTrackMatcherAlg::getBestMatchCharge(
+          art::Ptr<T> const recoObj,
+          art::Event const& event,
+          float& hitPur, float& hitEnergyPur,
+          float& hitEff, float& hitEnergyEff)
+{
+  art::FindManyP<recob::Hit> fmh({recoObj}, event, fHitTag);
+  const std::vector<art::Ptr<recob::Hit>> & hits = fmh.at(0);
+  return getBestMatchTheseHits(hits,true);
+}
+
+template<typename T> inline
+std::vector<art::Ptr<T> > 
+mctrue::BackTrackMatcherAlg::getMatched(
+                simb::MCParticle const& mcparticle, 
+                std::vector< art::Ptr<T> > const& recoObjs, 
+                art::Event const& event,
+                float minHitPur, float minHitEnergyPur)
+{
+  float hitEff=0; 
+  float hitEnergyEff=0;
+  return getMatched(mcparticle,recoObjs,event,minHitPur,minHitEnergyPur,hitEff,hitEnergyEff);
+}
+
+template<typename T> inline
+std::vector<art::Ptr<T> > 
+mctrue::BackTrackMatcherAlg::getMatched(
+                simb::MCParticle const& mcparticle, 
+                std::vector< art::Ptr<T> > const& recoObjs, 
+                art::Event const& event,
+                float minHitPur, float minHitEnergyPur,
+                float& hitEff, float& hitEnergyEff)
+{
+  std::vector<art::Ptr<recob::Track>> result;
+  art::FindManyP<recob::Hit> fmh(recoObjs, event, fHitTag);
+  const std::vector<size_t> matchedIs = getMatchedSetsOfHits(mcparticle,fmh,minHitPur,
+                        minHitEnergyPur,hitEff,hitEnergyEff);
+  for (auto matchedI: matchedIs)
+  {
+    result.push_back(recoObjs.at(matchedI));
+  }
+  return result;
+}
+
+//// Find recoObjs that match the given MCParticle (specialization for hits)
+//template<> inline
+//std::vector<art::Ptr<recob::Hit> > 
+//mctrue::BackTrackMatcherAlg::getMatched(
+//          simb::MCParticle const& mcparticle, 
+//          std::vector< art::Ptr<recob::Hit> > const& hits, 
+//          art::Event const& event,
+//          float minHitPur, float minHitEnergyPur,
+//          float& hitEff, float& hitEnergyEff)
+//{
+//  hitEff=-1; 
+//  hitEnergyEff=-1;
+//  const auto matchedHitsVec = bt->TrackIDsToHits(hits,{mcparticle.TrackId()});
+//  return matchedHitsVec.at(0);
+//}
 
 #endif

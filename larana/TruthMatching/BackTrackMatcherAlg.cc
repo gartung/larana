@@ -25,16 +25,6 @@ mctrue::BackTrackMatcherAlg::reconfigure(fhicl::ParameterSet const& pset)
   return;
 }
 
-const simb::MCParticle*
-mctrue::BackTrackMatcherAlg::getBestMatch(
-                art::Ptr<recob::Track> const track,
-                art::Event const& event)
-{
-  art::FindManyP<recob::Hit> fmh({track}, event, fHitTag);
-  const std::vector<art::Ptr<recob::Hit>> & hits = fmh.at(0);
-  return getBestMatchTheseHits(hits,false);
-}
-
 std::pair<double,double>
 mctrue::BackTrackMatcherAlg::getHitEffPur(
                     simb::MCParticle const& mcparticle,
@@ -104,4 +94,33 @@ mctrue::BackTrackMatcherAlg::getBestMatchTheseHits(
     return NULL;
   }
   return fBT->TrackIDToParticle(bestTrackID);
+}
+
+const std::vector<size_t> 
+mctrue::BackTrackMatcherAlg::getMatchedSetsOfHits(
+                simb::MCParticle const& mcparticle, 
+                art::FindManyP<recob::Hit>& fmh,
+                float minHitPur, float minHitEnergyPur,
+                float& hitEff, float& hitEnergyEff)
+{
+  hitEff = -1;
+  hitEnergyEff = -1;
+  std::vector<size_t> result;
+  const std::vector< art::Ptr<recob::Hit> > allHits;
+  for (unsigned iTrack=0; iTrack<fmh.size(); iTrack++)
+  {
+    const std::vector< art::Ptr<recob::Hit> > thisTrackHits = fmh.at(iTrack);
+    auto hiteffpur = getHitEffPur(mcparticle,thisTrackHits,allHits);
+    if(hiteffpur.second < minHitPur)
+    {
+      continue;
+    }
+    auto chargeeffpur = getHitChargeEffPur(mcparticle,thisTrackHits,allHits);
+    if(chargeeffpur.second < minHitEnergyPur)
+    {
+      continue;
+    }
+    result.push_back(iTrack);
+  }
+  return result;
 }
