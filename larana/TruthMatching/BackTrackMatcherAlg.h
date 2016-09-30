@@ -275,7 +275,9 @@ class mctrue::BackTrackMatcherAlg
     
 };
 
-// Template Definitions
+//////////////////////////
+// Template Definitions //
+//////////////////////////
 
 template<typename T> inline
 const simb::MCParticle* 
