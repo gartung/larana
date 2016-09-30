@@ -37,8 +37,6 @@ namespace mctrue {
 class mctrue::TrajectoryInterpExtrapAlg
 {
   public:
-    TrajectoryInterpExtrapAlg(fhicl::ParameterSet const& pset);
-    void reconfigure(fhicl::ParameterSet const& pset);
 
     /// Finds the point of closest approach of the trajectory to the point
     /**
@@ -51,11 +49,15 @@ class mctrue::TrajectoryInterpExtrapAlg
      * start point backwards and end point forwards in search of
      * a point of closer approach.
      */
-    const TVector3 pointOfClosestApproach(
+    inline const TVector3 pointOfClosestApproach(
                 const simb::MCTrajectory& trajectory,
                 const TVector3& point,
                 double& distance,
-                bool extrapolate=false);
+                bool extrapolate=false) 
+        {
+            TLorentzVector mom;
+            return pointOfClosestApproach(trajectory,point,distance,mom,extrapolate)
+        };
 
     /// Finds the point of closest approach of the trajectory to the point
     /**
@@ -83,6 +85,47 @@ class mctrue::TrajectoryInterpExtrapAlg
 
   private:
 
+    /// Find point of closest approach when closest traj point in middle of traj points
+    /**
+     * requires that the closest trajectory point has already been found, iClosest
+     */
+    const TVector3 interplateInMiddle(
+                const simb::MCTrajectory& trajectory,
+                const TVector3& point,
+                double& distance,
+                TLorentzVector& interpolatedMomentum,
+                const int iClosest);
+
+    /// Find point of closest approach when closest traj point is the first
+    /**
+     * Assumes the closest trajectory point is the first
+     */
+    const TVector3 interpExtrapAtBeginning(
+                const simb::MCTrajectory& trajectory,
+                const TVector3& point,
+                double& distance,
+                TLorentzVector& interpolatedMomentum,
+                bool extrapolate=false);
+
+    /// Find point of closest approach when closest traj point is the last
+    /**
+     * Assumes the closest trajectory point is the last
+     */
+    const TVector3 interpExtrapAtEnd(
+                const simb::MCTrajectory& trajectory,
+                const TVector3& point,
+                double& distance,
+                TLorentzVector& interpolatedMomentum,
+                bool extrapolate=false);
+    
+    /// Finds the trajectory point that is closest
+    /**
+     * Returns -1 if none found, and the index of the closest point otherwise
+     */
+    int findClosestTrajPoint(
+                const simb::MCTrajectory& trajectory,
+                const TVector3& point)
+
     /// Finds the point of closest approach to the line going through the segment
     /**
      * The resulting vector is extrapolated out along the line
@@ -98,32 +141,6 @@ class mctrue::TrajectoryInterpExtrapAlg
                 const TVector3& segment2,
                 const TVector3& point,
                 double& locationMeasure);
-
-    /// Finds the point of closest approach, no extrapolation
-    /**
-     * distance is set to the distance between the point of closest
-     * approach and the input point. If extrapolate is false and
-     * distance is large, this may mean that the point is nowhere near
-     * the trajectory.
-     */
-    const TVector3 pointOfClosestApproachNoExtrap(
-                const simb::MCTrajectory& trajectory,
-                const TVector3& point,
-                TLorentzVector& interpolatedMomentum,
-                double& distance);
-
-    /// Finds the point of closest approach, with extrapolation
-    /**
-     * distance is set to the distance between the point of closest
-     * approach and the input point. If extrapolate is false and
-     * distance is large, this may mean that the point is nowhere near
-     * the trajectory.
-     */
-    const TVector3 pointOfClosestApproachDoExtrap(
-                const simb::MCTrajectory& trajectory,
-                const TVector3& point,
-                TLorentzVector& interpolatedMomentum,
-                double& distance);
 
     /// Find the momentum at the point of closest approach
     /**
