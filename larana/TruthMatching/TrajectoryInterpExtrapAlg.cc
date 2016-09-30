@@ -33,10 +33,10 @@ mctrue::TrajectoryInterpExtrapAlg::pointOfClosestApproach(
             const TVector3& point,
             double& distance,
             TLorentzVector& interpolatedMomentum,
-            bool extrapolate=false)
+            bool extrapolate)
 {
   const size_t ntrajectory = trajectory.size();
-  const size_t iLastTrajectory = ntrajectory-1;
+  const int iLastTrajectory = ntrajectory-1;
   if (ntrajectory == 0)
   {
     distance = -1.;
@@ -44,9 +44,9 @@ mctrue::TrajectoryInterpExtrapAlg::pointOfClosestApproach(
   }
   else if (ntrajectory == 1)
   {
-    distance = (point-trajectory.Position(0).Vector()).Mag();
-    interpolatedMomentum = trajectory.Momentum(0)
-    return trajectory.Position(0).Vector();
+    distance = (point-trajectory.Position(0).Vect()).Mag();
+    interpolatedMomentum = trajectory.Momentum(0);
+    return trajectory.Position(0).Vect();
   }
   const int iClosest = findClosestTrajPoint(trajectory,point);
   if (iClosest < 0)
@@ -64,7 +64,7 @@ mctrue::TrajectoryInterpExtrapAlg::pointOfClosestApproach(
   }
   else
   {
-    return interplateInMiddle(trajectory,point,,distanceinterpolatedMomentum,iClosest);
+    return interplateInMiddle(trajectory,point,distance,interpolatedMomentum,iClosest);
   }
 }
 
@@ -82,9 +82,9 @@ mctrue::TrajectoryInterpExtrapAlg::interplateInMiddle(
 {
   double locationMeasureBefore = 0.;
   double locationMeasureAfter = 0.;
-  TVector3 segmentBefore = trajectory.Position(iClosest-1).Vector();
-  TVector3 segmentCenter = trajectory.Position(iClosest).Vector();
-  TVector3 segmentAfter = trajectory.Position(iClosest+1).Vector();
+  TVector3 segmentBefore = trajectory.Position(iClosest-1).Vect();
+  TVector3 segmentCenter = trajectory.Position(iClosest).Vect();
+  TVector3 segmentAfter = trajectory.Position(iClosest+1).Vect();
   TVector3 closestBefore = segmentPointOfClosestApproach(segmentBefore,segmentCenter,point,locationMeasureBefore);
   TVector3 closestAfter = segmentPointOfClosestApproach(segmentAfter,segmentCenter,point,locationMeasureAfter);
   if (locationMeasureBefore < 0)
@@ -115,8 +115,8 @@ mctrue::TrajectoryInterpExtrapAlg::interplateInMiddle(
     {
       interpolatedMomentum = interpolateMomentum(
                               closestBefore,
-                              trajectory.Position(iClosest-1).Vector(),
-                              trajectory.Position(iClosest).Vector(),
+                              trajectory.Position(iClosest-1).Vect(),
+                              trajectory.Position(iClosest).Vect(),
                               trajectory.Momentum(iClosest-1),
                               trajectory.Momentum(iClosest));
     }
@@ -133,8 +133,8 @@ mctrue::TrajectoryInterpExtrapAlg::interplateInMiddle(
     {
       interpolatedMomentum = interpolateMomentum(
                               closestAfter,
-                              trajectory.Position(iClosest).Vector(),
-                              trajectory.Position(iClosest+1).Vector(),
+                              trajectory.Position(iClosest).Vect(),
+                              trajectory.Position(iClosest+1).Vect(),
                               trajectory.Momentum(iClosest),
                               trajectory.Momentum(iClosest+1));
     }
@@ -153,17 +153,17 @@ mctrue::TrajectoryInterpExtrapAlg::interpExtrapAtBeginning(
             const TVector3& point,
             double& distance,
             TLorentzVector& interpolatedMomentum,
-            bool extrapolate=false)
+            bool extrapolate)
 {
   double locationMeasure = 0.;
-  TVector3 segment1 = trajectory.Position(0).Vector();
-  TVector3 segment2 = trajectory.Position(1).Vector();
+  TVector3 segment1 = trajectory.Position(0).Vect();
+  TVector3 segment2 = trajectory.Position(1).Vect();
   TVector3 thisPoint = segmentPointOfClosestApproach(segment1,segment2,point,locationMeasure);
   if ((!extrapolate) && locationMeasure < 0.)
   {
-    distance = (point-trajectory.Position(0).Vector()).Mag();
-    interpolatedMomentum = trajectory.Momentum(0)
-    return trajectory.Position(0).Vector();
+    distance = (point-trajectory.Position(0).Vect()).Mag();
+    interpolatedMomentum = trajectory.Momentum(0);
+    return trajectory.Position(0).Vect();
   }
   else if (locationMeasure > 1.)
   {
@@ -180,12 +180,12 @@ mctrue::TrajectoryInterpExtrapAlg::interpExtrapAtBeginning(
     {
       interpolatedMomentum = interpolateMomentum(
                                 thisPoint,
-                                trajectory.Position(0).Vector(),
-                                trajectory.Position(1).Vector(),
+                                trajectory.Position(0).Vect(),
+                                trajectory.Position(1).Vect(),
                                 trajectory.Momentum(0),
                                 trajectory.Momentum(1));
     }
-    return thisPoint
+    return thisPoint;
   }
 }
 
@@ -199,17 +199,19 @@ mctrue::TrajectoryInterpExtrapAlg::interpExtrapAtEnd(
             const TVector3& point,
             double& distance,
             TLorentzVector& interpolatedMomentum,
-            bool extrapolate=false)
+            bool extrapolate)
 {
   double locationMeasure = 0.;
-  TVector3 segment1 = trajectory.Position(iLastTrajectory).Vector();
-  TVector3 segment2 = trajectory.Position(iLastTrajectory-1).Vector();
+  const size_t ntrajectory = trajectory.size();
+  const int iLastTrajectory = ntrajectory-1;
+  TVector3 segment1 = trajectory.Position(iLastTrajectory).Vect();
+  TVector3 segment2 = trajectory.Position(iLastTrajectory-1).Vect();
   TVector3 thisPoint = segmentPointOfClosestApproach(segment1,segment2,point,locationMeasure);
   if ((!extrapolate) && locationMeasure < 0.)
   {
-    distance = (point-trajectory.Position(iLastTrajectory).Vector()).Mag();
-    interpolatedMomentum = trajectory.Momentum(iLastTrajectory)
-    return trajectory.Position(iLastTrajectory).Vector();
+    distance = (point-trajectory.Position(iLastTrajectory).Vect()).Mag();
+    interpolatedMomentum = trajectory.Momentum(iLastTrajectory);
+    return trajectory.Position(iLastTrajectory).Vect();
   }
   else if (locationMeasure > 1.)
   {
@@ -226,12 +228,12 @@ mctrue::TrajectoryInterpExtrapAlg::interpExtrapAtEnd(
     {
       interpolatedMomentum = interpolateMomentum(
                               thisPoint,
-                              trajectory.Position(iLastTrajectory).Vector(),
-                              trajectory.Position(iLastTrajectory-1).Vector(),
+                              trajectory.Position(iLastTrajectory).Vect(),
+                              trajectory.Position(iLastTrajectory-1).Vect(),
                               trajectory.Momentum(iLastTrajectory),
                               trajectory.Momentum(iLastTrajectory-1));
     }
-    return thisPoint
+    return thisPoint;
   }
 }
 
@@ -246,10 +248,10 @@ mctrue::TrajectoryInterpExtrapAlg::findClosestTrajPoint(
 {
   const size_t ntrajectory = trajectory.size();
   int result = -1;
-  closestDistance = 1e15;
+  double closestDistance = 1e15;
   for(size_t iPoint=0; iPoint<ntrajectory; iPoint++)
   {
-    float thisDistance = (point-trajectory.Position(iPoint).Vector()).Mag();
+    double thisDistance = (point-trajectory.Position(iPoint).Vect()).Mag();
     if (thisDistance < closestDistance)
     {
       result = iPoint;
@@ -276,8 +278,15 @@ mctrue::TrajectoryInterpExtrapAlg::segmentPointOfClosestApproach(
             const TVector3& point,
             double& locationMeasure)
 {
+   const TVector3 u = point-segment1;
+   const TVector3 v = segment2-segment1;
+   const double uMag = u.Mag();
+   locationMeasure = u.Dot(v)/uMag;
+   const double vMagInv = 1./v.Mag();
+   const TVector3 vhat = v * vMagInv;
+   const TVector3 result = segment1 + u.Dot(vhat)*vhat;
+   return result;
 }
-
 
 /// Find the momentum at the point of closest approach
 /**
@@ -294,6 +303,10 @@ mctrue::TrajectoryInterpExtrapAlg::interpolateMomentum(
             const TLorentzVector& momentum1,
             const TLorentzVector& momentum2)
 {
-  return TLorentzVector();
+    const double pointDistance = (point2-point1).Mag();
+    const double approachDistance = (pointOfClosestApproach-point1).Mag();
+    const double distanceFraction = pointDistance/approachDistance;
+    const TLorentzVector momDiff = momentum2-momentum1;
+    return distanceFraction*momDiff + momentum1;
 }
 

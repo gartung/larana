@@ -56,7 +56,7 @@ class mctrue::TrajectoryInterpExtrapAlg
                 bool extrapolate=false) 
         {
             TLorentzVector mom;
-            return pointOfClosestApproach(trajectory,point,distance,mom,extrapolate)
+            return pointOfClosestApproach(trajectory,point,distance,mom,extrapolate);
         };
 
     /// Finds the point of closest approach of the trajectory to the point
@@ -124,7 +124,7 @@ class mctrue::TrajectoryInterpExtrapAlg
      */
     int findClosestTrajPoint(
                 const simb::MCTrajectory& trajectory,
-                const TVector3& point)
+                const TVector3& point);
 
     /// Finds the point of closest approach to the line going through the segment
     /**
