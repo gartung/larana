@@ -177,6 +177,40 @@ class mctrue::BackTrackMatcherAlg
                 float minHitPur, float minHitEnergyPur,
                 float& hitEff, float& hitEnergyEff);
 
+      /// Sorts reco objects by distance to MCParticle start point
+      /**
+        * If you feed a vector of art::Ptr's of reco objects in 
+        * here, it will sort them by nearest hit to the MCParticle
+        * start point, nearest object first. This uses BackTracker
+        * to find the object's hits and then finds which simIDEs
+        * those hits came from. The nearest simIDE to the MCParticle
+        * start point is then found. The objects are then sorted
+        * by this distance, closest to farthest. The sorted vector
+        * is returned.
+        */
+      template<typename T> inline
+      std::vector<art::Ptr<T> > sortByDistToMCParticleStart(
+                simb::MCParticle const& mcparticle, 
+                std::vector< art::Ptr<T> >& recoObjs,
+                art::Event const& event);
+
+      /// Sorts reco objects by distance to MCParticle end point
+      /**
+        * If you feed a vector of art::Ptr's of reco objects in 
+        * here, it will sort them by nearest hit to the MCParticle
+        * end point, nearest object first. This uses BackTracker
+        * to find the object's hits and then finds which simIDEs
+        * those hits came from. The nearest simIDE to the MCParticle
+        * end point is then found. The objects are then sorted
+        * by this distance, closest to farthest. The sorted vector
+        * is returned.
+        */
+      template<typename T> inline
+      std::vector<art::Ptr<T> > sortByDistToMCParticleEnd(
+                simb::MCParticle const& mcparticle, 
+                std::vector< art::Ptr<T> >& recoObjs,
+                art::Event const& event);
+
 //    /// Find hits that match the given mcparticle
 //    /**
 //     * Uses backtracker to find hits that match the MCParticle
@@ -270,8 +304,22 @@ class mctrue::BackTrackMatcherAlg
                 float minHitPur, float minHitEnergyPur,
                 float& hitEff, float& hitEnergyEff);
 
+    /// Find sorted indices of sets of hits, based on distance to point
+    /**
+     * Returns a vector of indices, sorting the input sets of hits by
+     * distance to the given point. Uses BackTracker to find the
+     * true positions of the hits.
+     */
+    const std::vector<size_t> sortObjsByDistance(
+                const TVector3 & point, 
+                const art::FindManyP<recob::Hit> & fmh);
+
+    //////////////////////
+    // Member Variables //
+    //////////////////////
+
     art::ServiceHandle<cheat::BackTracker> fBT; ///< the back tracker service
-    art::InputTag fHitTag;
+    art::InputTag fHitTag; ///< input tag of hits used by this algo
     
 };
 
@@ -379,5 +427,39 @@ mctrue::BackTrackMatcherAlg::getMatched(
 //  const auto matchedHitsVec = bt->TrackIDsToHits(hits,{mcparticle.TrackId()});
 //  return matchedHitsVec.at(0);
 //}
+
+template<typename T> inline
+std::vector<art::Ptr<T> >
+mctrue::BackTrackMatcherAlg::sortByDistToMCParticleStart(
+                simb::MCParticle const& mcparticle, 
+                std::vector< art::Ptr<T> >& recoObjs,
+                art::Event const& event)
+{
+  art::FindManyP<recob::Hit> fmh(recoObjs, event, fHitTag);
+  const std::vector<size_t> indices = sortObjsByDistance(mcparticle.Position().Vect(),recoObjs,fmh);
+  std::vector<art::Ptr<T>> result;
+  for (const auto& index: indices)
+  {
+    result.push_back(recoObjs[index]);
+  }
+  return result;
+}
+
+template<typename T> inline
+std::vector<art::Ptr<T> >
+mctrue::BackTrackMatcherAlg::sortByDistToMCParticleEnd(
+                simb::MCParticle const& mcparticle, 
+                std::vector< art::Ptr<T> >& recoObjs,
+                art::Event const& event)
+{
+  art::FindManyP<recob::Hit> fmh(recoObjs, event, fHitTag);
+  const std::vector<size_t> indices = sortObjsByDistance(mcparticle.EndPosition().Vect(),fmh);
+  std::vector<art::Ptr<T>> result;
+  for (const auto& index: indices)
+  {
+    result.push_back(recoObjs[index]);
+  }
+  return result;
+}
 
 #endif

@@ -11,6 +11,7 @@
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "canvas/Utilities/InputTag.h"
 #include <set>
+#include <algorithm>
 
 mctrue::BackTrackMatcherAlg::BackTrackMatcherAlg(fhicl::ParameterSet const& pset): fBT(), fHitTag()
 {
@@ -122,5 +123,41 @@ mctrue::BackTrackMatcherAlg::getMatchedSetsOfHits(
     }
     result.push_back(iTrack);
   }
+  return result;
+}
+
+const std::vector<size_t> 
+mctrue::BackTrackMatcherAlg::sortObjsByDistance(
+            const TVector3 & point, 
+            const art::FindManyP<recob::Hit> & fmh)
+{
+  std::vector<size_t> result;
+  std::vector<double> objDistances;
+  for (size_t iObj=0; iObj<fmh.size(); iObj++)
+  {
+    const std::vector< art::Ptr<recob::Hit> > objHits = fmh.at(iObj);
+    double closestDistance = 1.0e9;
+    for (const auto & hit: objHits)
+    {
+      std::vector<double> hitPointVect = fBT->HitToXYZ(hit);
+      if(hitPointVect.size() != 3)  
+      {
+        throw cet::exception("IvalidSize","HitToXYZ returned a vector with size != 3, size: ");
+      }
+      const TVector3 hitPoint(hitPointVect[0],hitPointVect[1],hitPointVect[2]);
+      const double hitDistance = (hitPoint - point).Mag();
+      if (hitDistance < closestDistance)
+      {
+        closestDistance = hitDistance;
+      }
+    } // for hit
+    objDistances.push_back(closestDistance);
+    result.push_back(iObj);
+  } // for iObj
+  std::sort(result.begin(),result.end(),
+            [&objDistances](size_t a, size_t b){
+                return (objDistances[a]<objDistances[b]);
+            }
+  );
   return result;
 }
