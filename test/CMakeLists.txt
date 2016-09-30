@@ -5,3 +5,4 @@ include(CetTest)
 cet_enable_asserts()
 
 add_subdirectory(OpticalDetector)
+add_subdirectory(TruthMatching)
