@@ -168,7 +168,31 @@ mctrue::TrajectoryInterpExtrapAlg::interpExtrapAtBeginning(
   }
   else if (locationMeasure > 1.)
   {
-    throw cet::exception("IvalidValue","locationMeasure > 1 when segment1 should be closer");
+    mf::LogError lerr("TrajectoryInterpExtrapAlg vars: \n");
+    lerr << " locationMeasure: " << locationMeasure << "\n";
+    lerr << " segment1: (";
+    lerr << segment1.X() << ",";
+    lerr << segment1.Y() << ",";
+    lerr << segment1.Z() << ")\n";
+    lerr << " segment2: (";
+    lerr << segment2.X() << ",";
+    lerr << segment2.Y() << ",";
+    lerr << segment2.Z() << ")\n";
+    lerr << " point: (";
+    lerr << point.X() << ",";
+    lerr << point.Y() << ",";
+    lerr << point.Z() << ")\n";
+    lerr << " thisPoint: (";
+    lerr << thisPoint.X() << ",";
+    lerr << thisPoint.Y() << ",";
+    lerr << thisPoint.Z() << ")\n";
+    lerr << " point-segment1 distance: " << (point-segment1).Mag() << '\n';
+    lerr << " point-segment2 distance: " << (point-segment2).Mag() << '\n';
+    lerr << " segment2-segment1 distance: " << (segment2-segment1).Mag() << '\n';
+    std::string errMsg;
+    errMsg += "TrajectoryInterpExtrapAlg::interpExtrapAtBeginning:";
+    errMsg += " locationMeasure > 1 when segment1 should be closer.";
+    throw cet::exception("IvalidValue",errMsg);
   }
   else
   {
@@ -216,7 +240,27 @@ mctrue::TrajectoryInterpExtrapAlg::interpExtrapAtEnd(
   }
   else if (locationMeasure > 1.)
   {
-    throw cet::exception("IvalidValue","locationMeasure > 1 when segment1 should be closer");
+    std::string errMsg;
+    errMsg += "TrajectoryInterpExtrapAlg::interpExtrapAtEnd:";
+    errMsg += " locationMeasure > 1 when segment1 should be closer.";
+    errMsg += " locationMeasure: " + std::to_string(locationMeasure);
+    errMsg += " segment1: (";
+    errMsg += std::to_string(segment1.X()) + ",";
+    errMsg += std::to_string(segment1.Y()) + ",";
+    errMsg += std::to_string(segment1.Z()) + ")";
+    errMsg += " segment2: (";
+    errMsg += std::to_string(segment2.X()) + ",";
+    errMsg += std::to_string(segment2.Y()) + ",";
+    errMsg += std::to_string(segment2.Z()) + ")";
+    errMsg += " point: (";
+    errMsg += std::to_string(point.X()) + ",";
+    errMsg += std::to_string(point.Y()) + ",";
+    errMsg += std::to_string(point.Z()) + ")";
+    errMsg += " thisPoint: (";
+    errMsg += std::to_string(thisPoint.X()) + ",";
+    errMsg += std::to_string(thisPoint.Y()) + ",";
+    errMsg += std::to_string(thisPoint.Z()) + ")";
+    throw cet::exception("IvalidValue",errMsg);
   }
   else
   {
@@ -281,11 +325,41 @@ mctrue::TrajectoryInterpExtrapAlg::segmentPointOfClosestApproach(
 {
    const TVector3 u = point-segment1;
    const TVector3 v = segment2-segment1;
-   const double uMag = u.Mag();
-   locationMeasure = u.Dot(v)/uMag;
    const double vMagInv = 1./v.Mag();
+   locationMeasure = u.Dot(v)*vMagInv*vMagInv;
    const TVector3 vhat = v * vMagInv;
    const TVector3 result = segment1 + u.Dot(vhat)*vhat;
+   //mf::LogError ldb("TrajectoryInterpExtrapAlg::segmentPointOfClosestApproach");
+   //ldb << " segment1: (";
+   //ldb << segment1.X() << ",";
+   //ldb << segment1.Y() << ",";
+   //ldb << segment1.Z() << ")\n";
+   //ldb << " segment2: (";
+   //ldb << segment2.X() << ",";
+   //ldb << segment2.Y() << ",";
+   //ldb << segment2.Z() << ")\n";
+   //ldb << " point: (";
+   //ldb << point.X() << ",";
+   //ldb << point.Y() << ",";
+   //ldb << point.Z() << ")\n";
+   //ldb << " u: (";
+   //ldb << u.X() << ",";
+   //ldb << u.Y() << ",";
+   //ldb << u.Z() << ")\n";
+   //ldb << " v: (";
+   //ldb << v.X() << ",";
+   //ldb << v.Y() << ",";
+   //ldb << v.Z() << ")\n";
+   //ldb << "u dot v: "<< u.Dot(v) << "\n";
+   //ldb << "|v|: "<< v.Mag() << "\n";
+   //ldb << "|u|: "<< u.Mag() << "\n";
+   //ldb << "(u dot v ) / |u|: "<< u.Dot(v)/u.Mag() << "\n";
+   //ldb << "(u dot v ) / |v|: "<< u.Dot(v)/v.Mag()/v.Mag() << "\n";
+   //ldb << "locationMeasure: "<< locationMeasure << "\n";
+   //ldb << " result: (";
+   //ldb << result.X() << ",";
+   //ldb << result.Y() << ",";
+   //ldb << result.Z() << ")\n";
    return result;
 }
 
