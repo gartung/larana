@@ -285,4 +285,320 @@ BOOST_AUTO_TEST_CASE(checkTwoTrajPoints)
   
 }
 
+BOOST_AUTO_TEST_CASE(checkLongLineTraj)
+{
+  simb::MCTrajectory mcTraj;
+  size_t nPoints = 1000;
+  for (size_t i=0;i<nPoints;i++)
+  {
+    mcTraj.push_back(TLorentzVector(i,0,0,0),TLorentzVector(i,0,0,i));
+  }
+  TVector3 point;
+  TLorentzVector interpMom;
+  double distance;
+  TVector3 result;
+
+  /////////
+
+  TVector3 correctPosInterp = mcTraj.Position(0).Vect();
+  TVector3 correctPosExtrap = correctPosInterp;
+  TLorentzVector correctMom = mcTraj.Momentum(0);
+  double correctDistanceInterp = (point-correctPosInterp).Mag();
+  double correctDistanceExtrap = (point-correctPosExtrap).Mag();
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceInterp,1e-3);
+  checkTVec3Close(result,correctPosInterp,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceExtrap,1e-3);
+  checkTVec3Close(result,correctPosExtrap,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  /////////
+
+  point = mcTraj.Position(nPoints-1).Vect()+TVector3(0,5,10);
+  correctPosInterp = mcTraj.Position(nPoints-1).Vect();
+  correctPosExtrap = correctPosInterp;
+  correctMom = mcTraj.Momentum(nPoints-1);
+  correctDistanceInterp = (point-correctPosInterp).Mag();
+  correctDistanceExtrap = (point-correctPosExtrap).Mag();
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceInterp,1e-3);
+  checkTVec3Close(result,correctPosInterp,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceExtrap,1e-3);
+  checkTVec3Close(result,correctPosExtrap,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+  
+  /////////
+
+  point = mcTraj.Position((nPoints-1)/2).Vect()+TVector3(0,5,10);
+  correctPosInterp = mcTraj.Position((nPoints-1)/2).Vect();
+  correctPosExtrap = correctPosInterp;
+  correctMom = mcTraj.Momentum((nPoints-1)/2);
+  correctDistanceInterp = (point-correctPosInterp).Mag();
+  correctDistanceExtrap = (point-correctPosExtrap).Mag();
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceInterp,1e-3);
+  checkTVec3Close(result,correctPosInterp,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceExtrap,1e-3);
+  checkTVec3Close(result,correctPosExtrap,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  /////////
+
+  point = mcTraj.Position(0).Vect()+TVector3(-10,5,10);
+  correctPosInterp = mcTraj.Position(0).Vect();
+  correctPosExtrap =  mcTraj.Position(0).Vect()+TVector3(-10,0,0);
+  correctMom = mcTraj.Momentum(0);
+  correctDistanceInterp = (point-correctPosInterp).Mag();
+  correctDistanceExtrap = (point-correctPosExtrap).Mag();
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceInterp,1e-3);
+  checkTVec3Close(result,correctPosInterp,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceExtrap,1e-3);
+  checkTVec3Close(result,correctPosExtrap,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+  
+  /////////
+
+  point = mcTraj.Position(nPoints-1).Vect()+TVector3(100,-500,10);
+  correctPosInterp = mcTraj.Position(nPoints-1).Vect();
+  correctPosExtrap =  mcTraj.Position(nPoints-1).Vect()+TVector3(100,0,0);
+  correctMom = mcTraj.Momentum(nPoints-1);
+  correctDistanceInterp = (point-correctPosInterp).Mag();
+  correctDistanceExtrap = (point-correctPosExtrap).Mag();
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceInterp,1e-3);
+  checkTVec3Close(result,correctPosInterp,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceExtrap,1e-3);
+  checkTVec3Close(result,correctPosExtrap,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+  
+  /////////
+
+  point = mcTraj.Position((nPoints-1)/2).Vect()+TVector3(0.2,5,10);
+  correctPosInterp = mcTraj.Position((nPoints-1)/2).Vect()+TVector3(0.2,0,0);
+  correctPosExtrap = correctPosInterp;
+  correctDistanceInterp = (point-correctPosInterp).Mag();
+  correctDistanceExtrap = (point-correctPosExtrap).Mag();
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceInterp,1e-3);
+  checkTVec3Close(result,correctPosInterp,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceExtrap,1e-3);
+  checkTVec3Close(result,correctPosExtrap,1e-3);
+
+  /////////
+
+  point = mcTraj.Position((nPoints-1)/2).Vect()+TVector3(-0.2,5,10);
+  correctPosInterp = mcTraj.Position((nPoints-1)/2).Vect()+TVector3(-0.2,0,0);
+  correctPosExtrap = correctPosInterp;
+  correctDistanceInterp = (point-correctPosInterp).Mag();
+  correctDistanceExtrap = (point-correctPosExtrap).Mag();
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceInterp,1e-3);
+  checkTVec3Close(result,correctPosInterp,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceExtrap,1e-3);
+  checkTVec3Close(result,correctPosExtrap,1e-3);
+
+  /////////
+
+  point = mcTraj.Position(0).Vect()+TVector3(0.45,5,10);
+  correctPosInterp = mcTraj.Position(0).Vect()+TVector3(0.45,0,0);
+  correctPosExtrap = correctPosInterp;
+  correctDistanceInterp = (point-correctPosInterp).Mag();
+  correctDistanceExtrap = (point-correctPosExtrap).Mag();
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceInterp,1e-3);
+  checkTVec3Close(result,correctPosInterp,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceExtrap,1e-3);
+  checkTVec3Close(result,correctPosExtrap,1e-3);
+  
+  /////////
+
+  point = mcTraj.Position(nPoints-1).Vect()+TVector3(-0.49,-500,10);
+  correctPosInterp = mcTraj.Position(nPoints-1).Vect()+TVector3(-0.49,0,0);
+  correctPosExtrap = correctPosInterp;
+  correctDistanceInterp = (point-correctPosInterp).Mag();
+  correctDistanceExtrap = (point-correctPosExtrap).Mag();
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceInterp,1e-3);
+  checkTVec3Close(result,correctPosInterp,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceExtrap,1e-3);
+  checkTVec3Close(result,correctPosExtrap,1e-3);
+  
+}
+
+BOOST_AUTO_TEST_CASE(checkSharpKinkTraj)
+{
+  simb::MCTrajectory mcTraj;
+  TLorentzVector firstTrajPoint(0,0,0,0);
+  TLorentzVector firstTrajPointMom(1,0,0,1);
+  TLorentzVector secondTrajPoint(1,1,0,1);
+  TLorentzVector secondTrajPointMom(2,0,0,2);
+  TLorentzVector thirdTrajPoint(2,0,0,2);
+  TLorentzVector thirdTrajPointMom(3,0,0,3);
+  mcTraj.push_back(firstTrajPoint,firstTrajPointMom);
+  mcTraj.push_back(secondTrajPoint,secondTrajPointMom);
+  mcTraj.push_back(thirdTrajPoint,thirdTrajPointMom);
+  TVector3 point;
+  TLorentzVector interpMom;
+  double distance;
+  TVector3 result;
+
+  /////////
+
+  point = TVector3(1,2,0);
+  TVector3 correctPosInterp = secondTrajPoint.Vect();
+  TVector3 correctPosExtrap = correctPosInterp;
+  TLorentzVector correctMom = secondTrajPointMom;
+  double correctDistanceInterp = (point-correctPosInterp).Mag();
+  double correctDistanceExtrap = (point-correctPosExtrap).Mag();
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceInterp,1e-3);
+  checkTVec3Close(result,correctPosInterp,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceExtrap,1e-3);
+  checkTVec3Close(result,correctPosExtrap,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  /////////
+
+  point = TVector3(1.1,2,0);
+  correctPosInterp = secondTrajPoint.Vect();
+  correctPosExtrap = correctPosInterp;
+  correctMom = secondTrajPointMom;
+  correctDistanceInterp = (point-correctPosInterp).Mag();
+  correctDistanceExtrap = (point-correctPosExtrap).Mag();
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceInterp,1e-3);
+  checkTVec3Close(result,correctPosInterp,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceExtrap,1e-3);
+  checkTVec3Close(result,correctPosExtrap,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  /////////
+
+  point = TVector3(0.9,2,0);
+  correctPosInterp = secondTrajPoint.Vect();
+  correctPosExtrap = correctPosInterp;
+  correctMom = secondTrajPointMom;
+  correctDistanceInterp = (point-correctPosInterp).Mag();
+  correctDistanceExtrap = (point-correctPosExtrap).Mag();
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceInterp,1e-3);
+  checkTVec3Close(result,correctPosInterp,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceExtrap,1e-3);
+  checkTVec3Close(result,correctPosExtrap,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  /////////
+
+  point = TVector3(0,1.,0);
+  correctPosInterp = TVector3(0.5,0.5,0.);
+  correctPosExtrap = correctPosInterp;
+  correctMom = TLorentzVector(1.5,0,0,1.5);
+  correctDistanceInterp = (point-correctPosInterp).Mag();
+  correctDistanceExtrap = (point-correctPosExtrap).Mag();
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceInterp,1e-3);
+  checkTVec3Close(result,correctPosInterp,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceExtrap,1e-3);
+  checkTVec3Close(result,correctPosExtrap,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  /////////
+
+  point = TVector3(2.,1.,0);
+  correctPosInterp = TVector3(1.5,0.5,0.);
+  correctPosExtrap = correctPosInterp;
+  correctMom = TLorentzVector(2.5,0,0,2.5);
+  correctDistanceInterp = (point-correctPosInterp).Mag();
+  correctDistanceExtrap = (point-correctPosExtrap).Mag();
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceInterp,1e-3);
+  checkTVec3Close(result,correctPosInterp,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceExtrap,1e-3);
+  checkTVec3Close(result,correctPosExtrap,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+}
+
+
 BOOST_AUTO_TEST_SUITE_END()

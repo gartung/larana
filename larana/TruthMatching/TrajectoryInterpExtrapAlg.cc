@@ -98,11 +98,11 @@ mctrue::TrajectoryInterpExtrapAlg::interplateInMiddle(
   }
   if (locationMeasureAfter < 0)
   {
-      closestAfter = segmentCenter;
+    throw cet::exception("IvalidValue","locationMeasureAfter < 0 when segmentCenter should be closer");
   }
   if (locationMeasureAfter > 1)
   {
-    throw cet::exception("IvalidValue","locationMeasureAfter > 1 when segmentCenter should be closer");
+    closestAfter = segmentCenter;
   }
   double distanceBefore = (point-closestBefore).Mag();
   double distanceAfter = (point-closestAfter).Mag();
@@ -126,7 +126,7 @@ mctrue::TrajectoryInterpExtrapAlg::interplateInMiddle(
   }
   else
   {
-    if(locationMeasureAfter < 0)
+    if(locationMeasureAfter > 1)
     {
       interpolatedMomentum = trajectory.Momentum(iClosest);
     }
