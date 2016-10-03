@@ -13,7 +13,8 @@
 /// Finds the point of closest approach of the trajectory to the point
 /**
  * distance is set to the distance between the point of closest
- * approach and the input point. If extrapolate is false and
+ * approach and the input point. It will be < 0 if finding the point 
+ * of closest approach fails. If extrapolate is false and
  * distance is large, this may mean that the point is nowhere near
  * the trajectory.
  *
@@ -303,10 +304,38 @@ mctrue::TrajectoryInterpExtrapAlg::interpolateMomentum(
             const TLorentzVector& momentum1,
             const TLorentzVector& momentum2)
 {
+    //mf::LogError ldb("interpolateMomentum vars: ");
+    //ldb << "pointOfClosestApproach " << pointOfClosestApproach.X() 
+    //    << ", " << pointOfClosestApproach.Y() << ", " << pointOfClosestApproach.Z() << " ";
+    //ldb << "point1 " << point1.X() 
+    //    << ", " << point1.Y() << ", " << point1.Z() << " ";
+    //ldb << "point2 " << point2.X() 
+    //    << ", " << point2.Y() << ", " << point2.Z() << " ";
+    //ldb << "momentum1 " << momentum1.X() 
+    //    << ", " << momentum1.Y() << ", " << momentum1.Z() << ", " << momentum1.T() << " ";
+    //ldb << "momentum2 " << momentum2.X() 
+    //    << ", " << momentum2.Y() << ", " << momentum2.Z() << ", " << momentum2.T() << " ";
+    if (pointOfClosestApproach == point1)
+    {
+      return momentum1;
+    }
+    else if (pointOfClosestApproach == point2)
+    {
+      return momentum2;
+    }
     const double pointDistance = (point2-point1).Mag();
     const double approachDistance = (pointOfClosestApproach-point1).Mag();
-    const double distanceFraction = pointDistance/approachDistance;
+    const double distanceFraction = approachDistance/pointDistance;
     const TLorentzVector momDiff = momentum2-momentum1;
-    return distanceFraction*momDiff + momentum1;
+    const TLorentzVector result = distanceFraction*momDiff + momentum1;
+    //ldb << '\n';
+    //ldb << "pointDistance " << pointDistance << " ";
+    //ldb << "approachDistance " << approachDistance << " ";
+    //ldb << "distanceFraction " << distanceFraction << " ";
+    //ldb << "momDiff " << momDiff.X() 
+    //    << ", " << momDiff.Y() << ", " << momDiff.Z() << ", " << momDiff.T() << " ";
+    //ldb << "result " << result.X() 
+    //    << ", " << result.Y() << ", " << result.Z() << ", " << result.T() << " ";
+    return result;
 }
 

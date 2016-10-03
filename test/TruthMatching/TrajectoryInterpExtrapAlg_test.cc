@@ -1,13 +1,46 @@
-#define BOOST_TEST_MODULE ( AlgoThreshold_test )
+#define BOOST_TEST_MODULE ( TrajectoryInterpExtrapAlg_test )
 #include "cetlib/quiet_unit_test.hpp"
 
 #include "fhiclcpp/ParameterSet.h"
+#include "messagefacility/MessageLogger/MessageLogger.h" 
 #include "larana/TruthMatching/TrajectoryInterpExtrapAlg.h"
 
 
+#define checkTVec3Close(a, b, tolerance) { \
+  BOOST_REQUIRE_CLOSE(a.X(),b.X(),tolerance); \
+  BOOST_REQUIRE_CLOSE(a.Y(),b.Y(),tolerance); \
+  BOOST_REQUIRE_CLOSE(a.Z(),b.Z(),tolerance); \
+}
+//void checkTVec3Close(const TVector3 & a, const TVector3 & b, double tolerance)
+//{
+//  BOOST_REQUIRE_CLOSE(a.X(),b.X(),tolerance);
+//  BOOST_REQUIRE_CLOSE(a.Y(),b.Y(),tolerance);
+//  BOOST_REQUIRE_CLOSE(a.Z(),b.Z(),tolerance);
+//}
+
+#define checkTLVecClose(a,b,tolerance) { \
+  BOOST_REQUIRE_CLOSE(a.X(),b.X(),tolerance); \
+  BOOST_REQUIRE_CLOSE(a.Y(),b.Y(),tolerance); \
+  BOOST_REQUIRE_CLOSE(a.Z(),b.Z(),tolerance); \
+  BOOST_REQUIRE_CLOSE(a.T(),b.T(),tolerance); \
+}
+
+//void checkTLVecClose(const TLorentzVector & a, const TLorentzVector & b, double tolerance)
+//{
+//  BOOST_REQUIRE_CLOSE(a.X(),b.X(),tolerance);
+//  BOOST_REQUIRE_CLOSE(a.Y(),b.Y(),tolerance);
+//  BOOST_REQUIRE_CLOSE(a.Z(),b.Z(),tolerance);
+//  BOOST_REQUIRE_CLOSE(a.T(),b.T(),tolerance);
+//}
+
 struct TrajectoryInterpExtrapAlgFixture{
 
-  TrajectoryInterpExtrapAlgFixture() : myTrajAlg() {};
+  TrajectoryInterpExtrapAlgFixture() : myTrajAlg() 
+  {
+
+    mf::StartMessageFacility( mf::MessageFacilityService::SingleThread,
+                                 mf::MessageFacilityService::logConsole());
+  };
   mctrue::TrajectoryInterpExtrapAlg myTrajAlg;
 
 };
@@ -16,179 +49,240 @@ double const tolerance = 1e-6;
 
 BOOST_FIXTURE_TEST_SUITE(TrajectoryInterpExtrapAlg_test, TrajectoryInterpExtrapAlgFixture)
 
-BOOST_AUTO_TEST_CASE(checkConstructor)
-{ 
+BOOST_AUTO_TEST_CASE(checkNoTrajPoints)
+{
+  simb::MCTrajectory mcTraj;
+  TLorentzVector interpMom;
+  TVector3 point;
+  double distance;
+  TVector3 result;
 
-  BOOST_CHECK_EQUAL(1,1);
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance);
+  BOOST_CHECK(distance < 0);
 
-  //BOOST_FAIL("This test fails"); 
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance < 0);
 
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,true);
+  BOOST_CHECK(distance < 0);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance < 0);
+  
 }
 
-//BOOST_AUTO_TEST_CASE(checkNPulse)
-//{
-//  std::vector<short> wf(20,0);
-//  std::vector<double> ped_mean(20,0);
-//  std::vector<double> ped_sigma(20,0.1);
-//  wf[10]=10;
-//
-//  myAlgoThreshold.Reconstruct(wf,ped_mean,ped_sigma);
-//  BOOST_CHECK_EQUAL(myAlgoThreshold.GetNPulse(),1ul);
-//  //BOOST_CHECK_NE(myAlgoThreshold.GetPulse(0),(void*)0);
-//  //BOOST_CHECK_EQUAL(myAlgoThreshold.GetPulse(1),(void*)0);
-//
-//}
-//BOOST_AUTO_TEST_CASE(checkSquarePulse)
-//{ 
-//
-//  std::vector<short> wf(20,0);
-//  std::vector<double> ped_mean(20,0);
-//  std::vector<double> ped_sigma(20,0.1);
-//  //
-//
-//  double area = 0;
-//  for(size_t iter=0; iter<wf.size(); iter++){
-//    if(iter>5 && iter<15) {
-//      wf[iter] += 10;
-//      area += wf[iter];
-//    }
-//  }
-//
-//  myAlgoThreshold.Reconstruct(wf,ped_mean,ped_sigma);
-//
-//  BOOST_CHECK_EQUAL(myAlgoThreshold.GetNPulse(),1ul);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).t_start,5,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).t_end,15,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).t_max,6,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).area,area,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).peak,10.0,tolerance);
-//}
-//
-//BOOST_AUTO_TEST_CASE(checkTrianglePulse)
-//{ 
-//
-//  std::vector<short> wf(20,0);
-//  std::vector<double> ped_mean(20,0);
-//  std::vector<double> ped_sigma(20,0.1);
-//  //
-//
-//  double area = 0;
-//  for(size_t iter=0; iter<wf.size(); iter++){
-//    if(iter<=10)
-//      wf[iter] += iter;
-//    else if(iter>10)
-//      wf[iter] += 20-iter;
-//
-//    if(wf[iter]>=3) 
-//      area += wf[iter];
-//
-//  }
-//
-//  myAlgoThreshold.Reconstruct(wf,ped_mean,ped_sigma);
-//  BOOST_CHECK_EQUAL(myAlgoThreshold.GetNPulse(),1ul);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).t_start,1,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).t_end,19,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).t_max,10,tolerance);
-//  //BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).area,area,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).peak,10.0,tolerance);
-//}
-//
-//BOOST_AUTO_TEST_CASE(checkNonZeroPed)
-//{ 
-//
-//  double ped = 2;
-//  std::vector<short> wf(20,(short)ped);
-//  std::vector<double> ped_mean(20,ped);
-//  std::vector<double> ped_sigma(20,0.1);
-//
-//  double area = 0;
-//  for(size_t iter=0; iter<wf.size(); iter++){
-//    if(iter<=10)
-//      wf[iter] += iter;
-//    else if(iter>10)
-//      wf[iter] += 20-iter;
-//
-//    if(wf[iter]>=3+ped) 
-//      area += wf[iter] - ped;
-//
-//  }
-//
-//  myAlgoThreshold.Reconstruct(wf,ped_mean,ped_sigma);
-//  BOOST_CHECK_EQUAL(myAlgoThreshold.GetNPulse(),1ul);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).t_start,0,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).t_end,19,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).t_max,10,tolerance);
-//  //BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).area,area,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).peak,10.0,tolerance);
-//}
-//
-//BOOST_AUTO_TEST_CASE(checkPulseOffEnd)
-//{ 
-//
-//  std::vector<short> wf(20,0);
-//  std::vector<double> ped_mean(20,0);
-//  std::vector<double> ped_sigma(20,0.1);
-//  
-//
-//  wf[18] = 5; wf[19] = 10;
-//  double area = 15;
-//
-//  myAlgoThreshold.Reconstruct(wf,ped_mean,ped_sigma);
-//  BOOST_CHECK_EQUAL(myAlgoThreshold.GetNPulse(),1ul);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).t_start,17,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).t_end,19,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).t_max,19,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).area,area,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).peak,10.0,tolerance);
-//}
-//
-//BOOST_AUTO_TEST_CASE(checkPulseOffFront)
-//{ 
-//
-//  std::vector<short> wf(20,0);
-//  std::vector<double> ped_mean(20,0);
-//  std::vector<double> ped_sigma(20,0.1);
-//  
-//
-//  wf[0] = 10; wf[1] = 5;
-//  double area = 15;
-//
-//  myAlgoThreshold.Reconstruct(wf,ped_mean,ped_sigma);
-//  BOOST_CHECK_EQUAL(myAlgoThreshold.GetNPulse(),1ul);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).t_start,0,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).t_end,2,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).t_max,0,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).area,area,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).peak,10.0,tolerance);
-//}
-//
-//BOOST_AUTO_TEST_CASE(checkDoublePulse)
-//{ 
-//
-//  std::vector<short> wf(20,0);
-//  std::vector<double> ped_mean(20,0);
-//  std::vector<double> ped_sigma(20,0.1);
-//  
-//
-//  wf[4] = 5; wf[5] = 10; wf[6] = 5;
-//  wf[14] = 5; wf[15] = 10; wf[16] = 5;
-//  double area = 20;
-//
-//  myAlgoThreshold.Reconstruct(wf,ped_mean,ped_sigma);
-//  BOOST_CHECK_EQUAL(myAlgoThreshold.GetNPulse(),2ul);
-//
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).t_start,3,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).t_end,7,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).t_max,5,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).area,area,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(0).peak,10.0,tolerance);
-//
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(1).t_start,13,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(1).t_end,17,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(1).t_max,15,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(1).area,area,tolerance);
-//  BOOST_CHECK_CLOSE(myAlgoThreshold.GetPulse(1).peak,10.0,tolerance);
-//
-//}
+BOOST_AUTO_TEST_CASE(checkOneTrajPoints)
+{
+  simb::MCTrajectory mcTraj;
+  TLorentzVector firstTrajPoint(0,0,0,0);
+  TLorentzVector firstTrajPointMom(1,0,0,2);
+  mcTraj.push_back(firstTrajPoint,firstTrajPointMom);
+  TLorentzVector interpMom;
+  TVector3 point;
+  double distance;
+  TVector3 result;
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,0.,1e-3);
+  checkTVec3Close(result,firstTrajPoint.Vect(),1e-3);
+  
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,0.,1e-3);
+  checkTVec3Close(result,firstTrajPoint.Vect(),1e-3);
+  checkTLVecClose(interpMom,firstTrajPointMom,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,0.,1e-3);
+  checkTVec3Close(result,firstTrajPoint.Vect(),1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,0.,1e-3);
+  checkTVec3Close(result,firstTrajPoint.Vect(),1e-3);
+  checkTLVecClose(interpMom,firstTrajPointMom,1e-3);
+
+  point = TVector3(1.,0.,0.);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,1.,1e-3);
+  checkTVec3Close(result,firstTrajPoint.Vect(),1e-3);
+  
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,1.,1e-3);
+  checkTVec3Close(result,firstTrajPoint.Vect(),1e-3);
+  checkTLVecClose(interpMom,firstTrajPointMom,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,1.,1e-3);
+  checkTVec3Close(result,firstTrajPoint.Vect(),1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,1.,1e-3);
+  checkTVec3Close(result,firstTrajPoint.Vect(),1e-3);
+  checkTLVecClose(interpMom,firstTrajPointMom,1e-3);
+  
+}
+
+BOOST_AUTO_TEST_CASE(checkTwoTrajPoints)
+{
+  simb::MCTrajectory mcTraj;
+  TLorentzVector firstTrajPoint(0,0,0,0);
+  TLorentzVector firstTrajPointMom(1,0,0,5);
+  TLorentzVector secondTrajPoint(1,0,0,1);
+  TLorentzVector secondTrajPointMom(0,0,0,1);
+  mcTraj.push_back(firstTrajPoint,firstTrajPointMom);
+  mcTraj.push_back(secondTrajPoint,secondTrajPointMom);
+  TLorentzVector interpMom;
+  TVector3 point;
+  double distance;
+  TVector3 result;
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,0.,1e-3);
+  checkTVec3Close(result,firstTrajPoint.Vect(),1e-3);
+  
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,0.,1e-3);
+  checkTVec3Close(result,firstTrajPoint.Vect(),1e-3);
+  checkTLVecClose(interpMom,firstTrajPointMom,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,0.,1e-3);
+  checkTVec3Close(result,firstTrajPoint.Vect(),1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,0.,1e-3);
+  checkTVec3Close(result,firstTrajPoint.Vect(),1e-3);
+  checkTLVecClose(interpMom,firstTrajPointMom,1e-3);
+
+  point = TVector3(1.,0.,0.);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,0.,1e-3);
+  checkTVec3Close(result,secondTrajPoint.Vect(),1e-3);
+  
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,0.,1e-3);
+  checkTVec3Close(result,secondTrajPoint.Vect(),1e-3);
+  checkTLVecClose(interpMom,secondTrajPointMom,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,0.,1e-3);
+  checkTVec3Close(result,secondTrajPoint.Vect(),1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,0.,1e-3);
+  checkTVec3Close(result,secondTrajPoint.Vect(),1e-3);
+  checkTLVecClose(interpMom,secondTrajPointMom,1e-3);
+
+  point = TVector3(0.75,5.,0.);
+  TVector3 correctPos(0.75,0,0);
+  TLorentzVector correctMom(0.25,0,0,2);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance);
+  //mf::LogDebug ldb("interpolateMomentum args: ");
+  // ldb << "result: " << result.X()
+  //     << ", " << result.Y() << ", " << result.Z() << " ";
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,5.,1e-3);
+  checkTVec3Close(result,correctPos,1e-3);
+  
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,5.,1e-3);
+  checkTVec3Close(result,correctPos,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,5.,1e-3);
+  checkTVec3Close(result,correctPos,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,5.,1e-3);
+  checkTVec3Close(result,correctPos,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+  
+  point = TVector3(-1.,5.,0.);
+  TVector3 correctPosInterp = firstTrajPoint.Vect();
+  TVector3 correctPosExtrap(-1,0.,0);
+  correctMom = firstTrajPointMom;
+  double correctDistanceInterp = (point-correctPosInterp).Mag();
+  double correctDistanceExtrap = (point-correctPosExtrap).Mag();
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceInterp,1e-3);
+  checkTVec3Close(result,correctPosInterp,1e-3);
+  
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceInterp,1e-3);
+  checkTVec3Close(result,correctPosInterp,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,true);
+  BOOST_CHECK(distance >= 0.);
+  //mf::LogDebug ldb("interpolateMomentum args: ");
+  // ldb << "result: " << result.X()
+  //     << ", " << result.Y() << ", " << result.Z() << " ";
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceExtrap,1e-3);
+  checkTVec3Close(result,correctPosExtrap,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceExtrap,1e-3);
+  checkTVec3Close(result,correctPosExtrap,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  point = TVector3(6.,5.,0.125);
+  correctPosInterp = secondTrajPoint.Vect();
+  correctPosExtrap = TVector3(6.,0.,0.);
+  correctMom = secondTrajPointMom;
+  correctDistanceInterp = (point-correctPosInterp).Mag();
+  correctDistanceExtrap = (point-correctPosExtrap).Mag();
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceInterp,1e-3);
+  checkTVec3Close(result,correctPosInterp,1e-3);
+  
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceInterp,1e-3);
+  checkTVec3Close(result,correctPosInterp,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,true);
+  BOOST_CHECK(distance >= 0.);
+  //mf::LogDebug ldb("interpolateMomentum args: ");
+  // ldb << "result: " << result.X()
+  //     << ", " << result.Y() << ", " << result.Z() << " ";
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceExtrap,1e-3);
+  checkTVec3Close(result,correctPosExtrap,1e-3);
+
+  result = myTrajAlg.pointOfClosestApproach(mcTraj,point,distance,interpMom,true);
+  BOOST_CHECK(distance >= 0.);
+  BOOST_REQUIRE_CLOSE(distance,correctDistanceExtrap,1e-3);
+  checkTVec3Close(result,correctPosExtrap,1e-3);
+  checkTLVecClose(interpMom,correctMom,1e-3);
+  
+}
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -41,7 +41,8 @@ class mctrue::TrajectoryInterpExtrapAlg
     /// Finds the point of closest approach of the trajectory to the point
     /**
      * distance is set to the distance between the point of closest
-     * approach and the input point. If extrapolate is false and
+     * approach and the input point. It will be < 0 if finding the point 
+     * of closest approach fails. If extrapolate is false and
      * distance is large, this may mean that the point is nowhere near
      * the trajectory.
      *
@@ -62,7 +63,8 @@ class mctrue::TrajectoryInterpExtrapAlg
     /// Finds the point of closest approach of the trajectory to the point
     /**
      * distance is set to the distance between the point of closest
-     * approach and the input point. If extrapolate is false and
+     * approach and the input point. It will be < 0 if finding the point 
+     * of closest approach fails. If extrapolate is false and
      * distance is large, this may mean that the point is nowhere near
      * the trajectory.
      *
@@ -145,7 +147,8 @@ class mctrue::TrajectoryInterpExtrapAlg
     /// Find the momentum at the point of closest approach
     /**
      * distance is set to the distance between the point of closest
-     * approach and the input point. If extrapolate is false and
+     * approach and the input point. It will be < 0 if finding the point 
+     * of closest approach fails. If extrapolate is false and
      * distance is large, this may mean that the point is nowhere near
      * the trajectory.
      */
