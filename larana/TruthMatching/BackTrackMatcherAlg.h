@@ -187,6 +187,9 @@ class mctrue::BackTrackMatcherAlg
         * start point is then found. The objects are then sorted
         * by this distance, closest to farthest. The sorted vector
         * is returned.
+        *
+        * This is a fairly slow algorithm because it has to compute
+        * the distance to every hit.
         */
       template<typename T> inline
       std::vector<art::Ptr<T> > sortByDistToMCParticleStart(
@@ -204,6 +207,9 @@ class mctrue::BackTrackMatcherAlg
         * end point is then found. The objects are then sorted
         * by this distance, closest to farthest. The sorted vector
         * is returned.
+        *
+        * This is a fairly slow algorithm because it has to compute
+        * the distance to every hit.
         */
       template<typename T> inline
       std::vector<art::Ptr<T> > sortByDistToMCParticleEnd(
