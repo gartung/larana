@@ -27,9 +27,13 @@ BOOST_AUTO_TEST_CASE(checkEmpty)
   std::vector<art::Ptr<recob::Track>> tracks;
   double maxAngleRad=.1;
   double distance;
+  double angle;
   art::Ptr<recob::Track> result;
 
-  result = matcher.getBestMatch(mcPart,tracks,maxAngleRad,distance);
+  result = matcher.getBestMatch(mcPart,tracks,maxAngleRad);
+  BOOST_CHECK(distance >= 1e9);
+  BOOST_CHECK_EQUAL(result,art::Ptr<recob::Track>());
+  result = matcher.getBestMatch(mcPart,tracks,maxAngleRad,distance,angle);
   BOOST_CHECK(distance >= 1e9);
   BOOST_CHECK_EQUAL(result,art::Ptr<recob::Track>());
 }

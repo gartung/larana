@@ -44,15 +44,40 @@ class mctrue::StartPosDirMatcherAlg
      * The best match is found by finding the recoTrack with
      * one end closest to the start of the mcParticle trajectory
      * and with angle between the trajectory direction and
-     * track direction at that point less than maxAngleRad.
+     * track direction at that point less than maxAngleDeg.
+     * maxAngleDeg is the minimum angle between the two lines
+     * i.e. always <= 90 deg.
+     */
+    inline const art::Ptr<recob::Track> getBestMatch(
+                simb::MCParticle const& mcParticle, 
+                std::vector<art::Ptr<recob::Track>> const& recoTracks,
+                double const& maxAngleDeg)
+    {
+      double d, a;
+      return getBestMatch(mcParticle,recoTracks,maxAngleDeg,d,a);
+    };
+
+    /// Find best match track given MCParticle and set of tracks, with diagnostic info
+    /**
+     * Find the best matching track to the given mcParticle.
+     * The best match is found by finding the recoTrack with
+     * one end closest to the start of the mcParticle trajectory
+     * and with angle between the trajectory direction and
+     * track direction at that point less than maxAngleDeg.
+     * maxAngleDeg is the minimum angle between the two lines
+     * i.e. always <= 90 deg.
      *
      * distance is set to the distance between the track endpoint
      * and the mcParticle start point.
+     *
+     * angleDeg is set to the angle between the track direction at
+     * the matched endpoint and the mcParticle start direction.
+     * It is always <= 90 deg.
      */
     const art::Ptr<recob::Track> getBestMatch(
                 simb::MCParticle const& mcParticle, 
                 std::vector<art::Ptr<recob::Track>> const& recoTracks,
-                double const& maxAngleRad, double& distance);
+                double const& maxAngleDeg, double& distance, double& angleDeg);
 
 };
 
