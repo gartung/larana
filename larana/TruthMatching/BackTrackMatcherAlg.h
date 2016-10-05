@@ -442,7 +442,7 @@ mctrue::BackTrackMatcherAlg::sortByDistToMCParticleStart(
                 art::Event const& event)
 {
   art::FindManyP<recob::Hit> fmh(recoObjs, event, fHitTag);
-  const std::vector<size_t> indices = sortObjsByDistance(mcparticle.Position().Vect(),recoObjs,fmh);
+  const std::vector<size_t> indices = sortObjsByDistance(mcparticle.Position().Vect(),fmh);
   std::vector<art::Ptr<T>> result;
   for (const auto& index: indices)
   {

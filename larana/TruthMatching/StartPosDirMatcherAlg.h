@@ -15,7 +15,7 @@
 */
 
 //Framework includes
-#include "fhiclcpp/ParameterSet.h"
+#include "canvas/Persistency/Common/Ptr.h"
 
 //LArSoft includes
 #include "nusimdata/SimulationBase/MCParticle.h"

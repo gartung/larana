@@ -10,7 +10,7 @@
 #include "TrajectoryInterpExtrapAlg.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
-/// Finds the point of closest approach of the trajectory to the point
+/// Finds the point of closest approach of the trajectory to the point & interpolates momentum with debug info
 /**
  * distance is set to the distance between the point of closest
  * approach and the input point. It will be < 0 if finding the point 
@@ -24,6 +24,12 @@
  * interpolating the momentum between them. Otherwise, it is set to
  * the momentum of the nearest trajectory point.
  *
+ * iClosestTrajPoint will be set to the index of the closest
+ * trajectory point to point
+ *
+ * distanceToClosestTrajPoint will be set to the distance
+ * from point to the closest trajectory point
+ *
  * If extrapolate is true, will try projecting the trajectory
  * start point backwards and end point forwards in search of
  * a point of closer approach.
@@ -34,38 +40,44 @@ mctrue::TrajectoryInterpExtrapAlg::pointOfClosestApproach(
             const TVector3& point,
             double& distance,
             TLorentzVector& interpolatedMomentum,
+            size_t& iClosestTrajPoint,
+            double& distanceToClosestTrajPoint,
             bool extrapolate)
 {
   const size_t ntrajectory = trajectory.size();
-  const int iLastTrajectory = ntrajectory-1;
+  const size_t iLastTrajectory = ntrajectory-1;
   if (ntrajectory == 0)
   {
     distance = -1.;
+    iClosestTrajPoint=0;
     return TVector3();
   }
   else if (ntrajectory == 1)
   {
     distance = (point-trajectory.Position(0).Vect()).Mag();
     interpolatedMomentum = trajectory.Momentum(0);
+    iClosestTrajPoint=0;
     return trajectory.Position(0).Vect();
   }
-  const int iClosest = findClosestTrajPoint(trajectory,point);
+  const int iClosest = findClosestTrajPoint(trajectory,point,distanceToClosestTrajPoint);
   if (iClosest < 0)
   {
     distance = -1.;
+    iClosestTrajPoint=0;
     return TVector3();
   }
-  else if (iClosest == 0)
+  iClosestTrajPoint = iClosest;
+  if (iClosestTrajPoint == 0)
   {
     return interpExtrapAtBeginning(trajectory,point,distance,interpolatedMomentum,extrapolate);
   }
-  else if (iClosest == iLastTrajectory)
+  else if (iClosestTrajPoint == iLastTrajectory)
   {
     return interpExtrapAtEnd(trajectory,point,distance,interpolatedMomentum,extrapolate);
   }
   else
   {
-    return interplateInMiddle(trajectory,point,distance,interpolatedMomentum,iClosest);
+    return interplateInMiddle(trajectory,point,distance,interpolatedMomentum,iClosestTrajPoint);
   }
 }
 
@@ -289,11 +301,12 @@ mctrue::TrajectoryInterpExtrapAlg::interpExtrapAtEnd(
 int
 mctrue::TrajectoryInterpExtrapAlg::findClosestTrajPoint(
             const simb::MCTrajectory& trajectory,
-            const TVector3& point)
+            const TVector3& point,
+            double& closestDistance)
 {
   const size_t ntrajectory = trajectory.size();
   int result = -1;
-  double closestDistance = 1e15;
+  closestDistance = 1e15;
   for(size_t iPoint=0; iPoint<ntrajectory; iPoint++)
   {
     double thisDistance = (point-trajectory.Position(iPoint).Vect()).Mag();

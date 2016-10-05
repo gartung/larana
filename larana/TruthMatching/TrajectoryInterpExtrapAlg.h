@@ -60,7 +60,7 @@ class mctrue::TrajectoryInterpExtrapAlg
             return pointOfClosestApproach(trajectory,point,distance,mom,extrapolate);
         };
 
-    /// Finds the point of closest approach of the trajectory to the point
+    /// Finds the point of closest approach of the trajectory to the point & interpolates momentum
     /**
      * distance is set to the distance between the point of closest
      * approach and the input point. It will be < 0 if finding the point 
@@ -78,12 +78,51 @@ class mctrue::TrajectoryInterpExtrapAlg
      * start point backwards and end point forwards in search of
      * a point of closer approach.
      */
+    inline const TVector3 pointOfClosestApproach(
+                const simb::MCTrajectory& trajectory,
+                const TVector3& point,
+                double& distance,
+                TLorentzVector& interpolatedMomentum,
+                bool extrapolate=false)
+        {
+            size_t i;
+            double d;
+            return pointOfClosestApproach(trajectory,point,distance,interpolatedMomentum,i,d,extrapolate);
+        };
+
+    /// Finds the point of closest approach of the trajectory to the point & interpolates momentum with debug info
+    /**
+     * distance is set to the distance between the point of closest
+     * approach and the input point. It will be < 0 if finding the point 
+     * of closest approach fails. If extrapolate is false and
+     * distance is large, this may mean that the point is nowhere near
+     * the trajectory.
+     *
+     * interpolatedMomentum will be set to the approximate four-momentum 
+     * at the point of closest approach. If the point of closest approach
+     * is between trajectory points, the momentum is computed by linearly
+     * interpolating the momentum between them. Otherwise, it is set to
+     * the momentum of the nearest trajectory point.
+     *
+     * iClosestTrajPoint will be set to the index of the closest
+     * trajectory point to point
+     *
+     * distanceToClosestTrajPoint will be set to the distance
+     * from point to the closest trajectory point
+     *
+     * If extrapolate is true, will try projecting the trajectory
+     * start point backwards and end point forwards in search of
+     * a point of closer approach.
+     */
     const TVector3 pointOfClosestApproach(
                 const simb::MCTrajectory& trajectory,
                 const TVector3& point,
                 double& distance,
                 TLorentzVector& interpolatedMomentum,
+                size_t& iClosestTrajPoint,
+                double& distanceToClosestTrajPoint,
                 bool extrapolate=false);
+
 
   private:
 
@@ -126,7 +165,8 @@ class mctrue::TrajectoryInterpExtrapAlg
      */
     int findClosestTrajPoint(
                 const simb::MCTrajectory& trajectory,
-                const TVector3& point);
+                const TVector3& point,
+                double& closestDistance);
 
     /// Finds the point of closest approach to the line going through the segment
     /**

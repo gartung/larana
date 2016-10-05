@@ -34,48 +34,52 @@ mctrue::StartPosDirMatcherAlg::getBestMatch(
             std::vector<art::Ptr<recob::Track>> const& recoTracks,
             double const& maxAngleRad, double& distance)
 {
+  distance = 1e9;
+  if(mcParticle.NumberTrajectoryPoints() == 0)
+  {
+    return art::Ptr<recob::Track>(); //return an invalid art::Ptr
+  }
   const TVector3 mcpStartPos = mcParticle.Position().Vect();
   const TVector3 mcpStartMom = mcParticle.Momentum().Vect();
 
   auto bestMatch = recoTracks.end();
-  double bestDistance = 1e9; 
   for(auto track = recoTracks.begin(); track != recoTracks.end(); track++)
   {
     // First from the front of the track
     const TVector3 vertex = (*track)->Vertex();
     double vertexAngle = mcpStartMom.Angle(vertex);
-    if (vertexAngle > TMath.PiOver2())
+    if (vertexAngle > TMath::PiOver2())
     {
-      vertexAngle -= TMath.PiOver2();
+      vertexAngle -= TMath::PiOver2();
     }
     if (vertexAngle <= maxAngleRad)
     {
       const double vertexDistance = (mcpStartPos-vertex).Mag();
-      if (vertexDistance < bestDistance)
+      if (vertexDistance < distance)
       {
-        bestDistance = vertexDistance;
+        distance = vertexDistance;
         bestMatch = track;
       }
     }
     // Then end of track
     const TVector3 trkEnd = (*track)->End();
-    const double endAngle = mcpStartMom.Angle(trkEnd);
-    if (endAngle > TMath.PiOver2())
+    double endAngle = mcpStartMom.Angle(trkEnd);
+    if (endAngle > TMath::PiOver2())
     {
-      endAngle -= TMath.PiOver2();
+      endAngle -= TMath::PiOver2();
     }
     if (endAngle <= maxAngleRad)
     {
       const double endDistance = (mcpStartPos-trkEnd).Mag();
-      if (endDistance < bestDistance)
+      if (endDistance < distance)
       {
-        bestDistance = endDistance;
+        distance = endDistance;
         bestMatch = track;
       }
     }
   } //loop over recob::Tracks
 
-  if(bestMatch != recoVect.end())
+  if(bestMatch != recoTracks.end())
   {
     return *bestMatch; 
   }
