@@ -42,8 +42,6 @@ namespace mctrue {
 class mctrue::BackTrackMatcherAlg
 {
   public:
-    BackTrackMatcherAlg(fhicl::ParameterSet const& pset);
-    void reconfigure(fhicl::ParameterSet const& pset);
 
     /// Find best match MCParticle given recoObj based on N hits
     /**
@@ -54,7 +52,8 @@ class mctrue::BackTrackMatcherAlg
       template<typename T> inline
       const simb::MCParticle* getBestMatch(
                 art::Ptr<T> const recoObj,
-                art::Event const& event);
+                art::Event const& event,
+                art::InputTag const& assnsTag);
 
     /// Find best match MCParticle given recoObj based on N hits, with diagnostic values
     /**
@@ -88,6 +87,7 @@ class mctrue::BackTrackMatcherAlg
       const simb::MCParticle* getBestMatch(
                 art::Ptr<T> const recoObj,
                 art::Event const& event,
+                art::InputTag const& assnsTag,
                 float& hitPur, float& hitEnergyPur,
                 float& hitEff, float& hitEnergyEff);
 
@@ -101,7 +101,8 @@ class mctrue::BackTrackMatcherAlg
       template<typename T> inline
       const simb::MCParticle* getBestMatchCharge(
                 art::Ptr<T> const recoObj,
-                art::Event const& event);
+                art::Event const& event,
+                art::InputTag const& assnsTag);
 
     /// Find best match MCParticle given recoObj based on charge of hits, with diagnostic values
     /**
@@ -135,6 +136,7 @@ class mctrue::BackTrackMatcherAlg
       const simb::MCParticle* getBestMatchCharge(
                 art::Ptr<T> const recoObj,
                 art::Event const& event,
+                art::InputTag const& assnsTag,
                 float& hitPur, float& hitEnergyPur,
                 float& hitEff, float& hitEnergyEff);
 
@@ -167,6 +169,7 @@ class mctrue::BackTrackMatcherAlg
                 simb::MCParticle const& mcparticle, 
                 std::vector< art::Ptr<T> > const& recoObjs, 
                 art::Event const& event,
+                art::InputTag const& assnsTag,
                 float minHitPur, float minHitEnergyPur);
 
       template<typename T> inline
@@ -174,6 +177,7 @@ class mctrue::BackTrackMatcherAlg
                 simb::MCParticle const& mcparticle, 
                 std::vector< art::Ptr<T> > const& recoObjs, 
                 art::Event const& event,
+                art::InputTag const& assnsTag,
                 float minHitPur, float minHitEnergyPur,
                 float& hitEff, float& hitEnergyEff);
 
@@ -195,7 +199,8 @@ class mctrue::BackTrackMatcherAlg
       std::vector<art::Ptr<T> > sortByDistToMCParticleStart(
                 simb::MCParticle const& mcparticle, 
                 std::vector< art::Ptr<T> >& recoObjs,
-                art::Event const& event);
+                art::Event const& event,
+                art::InputTag const& assnsTag);
 
       /// Sorts reco objects by distance to MCParticle end point
       /**
@@ -215,7 +220,8 @@ class mctrue::BackTrackMatcherAlg
       std::vector<art::Ptr<T> > sortByDistToMCParticleEnd(
                 simb::MCParticle const& mcparticle, 
                 std::vector< art::Ptr<T> >& recoObjs,
-                art::Event const& event);
+                art::Event const& event,
+                art::InputTag const& assnsTag);
 
 //    /// Find hits that match the given mcparticle
 //    /**
@@ -325,8 +331,6 @@ class mctrue::BackTrackMatcherAlg
     //////////////////////
 
     art::ServiceHandle<cheat::BackTracker> fBT; ///< the back tracker service
-    art::InputTag fHitTag; ///< input tag of hits used by this algo
-    
 };
 
 //////////////////////////
@@ -337,13 +341,14 @@ template<typename T> inline
 const simb::MCParticle* 
 mctrue::BackTrackMatcherAlg::getBestMatch(
           art::Ptr<T> const recoObj,
-          art::Event const& event)
+          art::Event const& event,
+          art::InputTag const& assnsTag)
 {
   float hitPur=0; 
   float hitEnergyPur=0;
   float hitEff=0; 
   float hitEnergyEff=0;
-  return getBestMatch(recoObj,event,hitPur,hitEnergyPur,hitEff,hitEnergyEff);
+  return getBestMatch(recoObj,event,assnsTag,hitPur,hitEnergyPur,hitEff,hitEnergyEff);
 }
 
 template<typename T> inline
@@ -351,10 +356,11 @@ const simb::MCParticle*
 mctrue::BackTrackMatcherAlg::getBestMatch(
           art::Ptr<T> const recoObj,
           art::Event const& event,
+          art::InputTag const& assnsTag,
           float& hitPur, float& hitEnergyPur,
           float& hitEff, float& hitEnergyEff)
 {
-  art::FindManyP<recob::Hit> fmh({recoObj}, event, fHitTag);
+  art::FindManyP<recob::Hit> fmh({recoObj}, event, assnsTag);
   const std::vector<art::Ptr<recob::Hit>> & hits = fmh.at(0);
   return getBestMatchTheseHits(hits,false);
 }
@@ -363,13 +369,14 @@ template<typename T> inline
 const simb::MCParticle* 
 mctrue::BackTrackMatcherAlg::getBestMatchCharge(
           art::Ptr<T> const recoObj,
-          art::Event const& event)
+          art::Event const& event,
+          art::InputTag const& assnsTag)
 {
   float hitPur=0; 
   float hitEnergyPur=0;
   float hitEff=0; 
   float hitEnergyEff=0;
-  return getBestMatchCharge(recoObj,event,hitPur,hitEnergyPur,hitEff,hitEnergyEff);
+  return getBestMatchCharge(recoObj,event,assnsTag,hitPur,hitEnergyPur,hitEff,hitEnergyEff);
 }
 
 template<typename T> inline
@@ -377,10 +384,11 @@ const simb::MCParticle*
 mctrue::BackTrackMatcherAlg::getBestMatchCharge(
           art::Ptr<T> const recoObj,
           art::Event const& event,
+          art::InputTag const& assnsTag,
           float& hitPur, float& hitEnergyPur,
           float& hitEff, float& hitEnergyEff)
 {
-  art::FindManyP<recob::Hit> fmh({recoObj}, event, fHitTag);
+  art::FindManyP<recob::Hit> fmh({recoObj}, event, assnsTag);
   const std::vector<art::Ptr<recob::Hit>> & hits = fmh.at(0);
   return getBestMatchTheseHits(hits,true);
 }
@@ -391,11 +399,12 @@ mctrue::BackTrackMatcherAlg::getMatched(
                 simb::MCParticle const& mcparticle, 
                 std::vector< art::Ptr<T> > const& recoObjs, 
                 art::Event const& event,
+                art::InputTag const& assnsTag,
                 float minHitPur, float minHitEnergyPur)
 {
   float hitEff=0; 
   float hitEnergyEff=0;
-  return getMatched(mcparticle,recoObjs,event,minHitPur,minHitEnergyPur,hitEff,hitEnergyEff);
+  return getMatched(mcparticle,recoObjs,event,assnsTag,minHitPur,minHitEnergyPur,hitEff,hitEnergyEff);
 }
 
 template<typename T> inline
@@ -404,11 +413,12 @@ mctrue::BackTrackMatcherAlg::getMatched(
                 simb::MCParticle const& mcparticle, 
                 std::vector< art::Ptr<T> > const& recoObjs, 
                 art::Event const& event,
+                art::InputTag const& assnsTag,
                 float minHitPur, float minHitEnergyPur,
                 float& hitEff, float& hitEnergyEff)
 {
   std::vector<art::Ptr<recob::Track>> result;
-  art::FindManyP<recob::Hit> fmh(recoObjs, event, fHitTag);
+  art::FindManyP<recob::Hit> fmh(recoObjs, event, assnsTag);
   const std::vector<size_t> matchedIs = getMatchedSetsOfHits(mcparticle,fmh,minHitPur,
                         minHitEnergyPur,hitEff,hitEnergyEff);
   for (auto matchedI: matchedIs)
@@ -439,9 +449,10 @@ std::vector<art::Ptr<T> >
 mctrue::BackTrackMatcherAlg::sortByDistToMCParticleStart(
                 simb::MCParticle const& mcparticle, 
                 std::vector< art::Ptr<T> >& recoObjs,
-                art::Event const& event)
+                art::Event const& event,
+                art::InputTag const& assnsTag)
 {
-  art::FindManyP<recob::Hit> fmh(recoObjs, event, fHitTag);
+  art::FindManyP<recob::Hit> fmh(recoObjs, event, assnsTag);
   const std::vector<size_t> indices = sortObjsByDistance(mcparticle.Position().Vect(),fmh);
   std::vector<art::Ptr<T>> result;
   for (const auto& index: indices)
@@ -456,9 +467,10 @@ std::vector<art::Ptr<T> >
 mctrue::BackTrackMatcherAlg::sortByDistToMCParticleEnd(
                 simb::MCParticle const& mcparticle, 
                 std::vector< art::Ptr<T> >& recoObjs,
-                art::Event const& event)
+                art::Event const& event,
+                art::InputTag const& assnsTag)
 {
-  art::FindManyP<recob::Hit> fmh(recoObjs, event, fHitTag);
+  art::FindManyP<recob::Hit> fmh(recoObjs, event, assnsTag);
   const std::vector<size_t> indices = sortObjsByDistance(mcparticle.EndPosition().Vect(),fmh);
   std::vector<art::Ptr<T>> result;
   for (const auto& index: indices)

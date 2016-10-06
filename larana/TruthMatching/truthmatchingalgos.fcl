@@ -1,9 +1,0 @@
-
-BEGIN_PROLOG
-
-standard_backtrackmatcheralg:
-{
-  HitTag:            "gaushit"         # The name of the process that generated the hits
-}
-
-END_PROLOG

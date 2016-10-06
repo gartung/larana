@@ -13,19 +13,6 @@
 #include <set>
 #include <algorithm>
 
-mctrue::BackTrackMatcherAlg::BackTrackMatcherAlg(fhicl::ParameterSet const& pset): fBT(), fHitTag()
-{
-  reconfigure(pset);
-  return;
-} //end constructor
-
-void 
-mctrue::BackTrackMatcherAlg::reconfigure(fhicl::ParameterSet const& pset)
-{
-  fHitTag = pset.get<art::InputTag>("HitTag");
-  return;
-}
-
 std::pair<double,double>
 mctrue::BackTrackMatcherAlg::getHitEffPur(
                     simb::MCParticle const& mcparticle,
