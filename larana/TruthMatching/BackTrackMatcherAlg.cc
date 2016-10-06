@@ -12,6 +12,7 @@
 #include "canvas/Utilities/InputTag.h"
 #include <set>
 #include <algorithm>
+#include <iostream>
 
 std::pair<double,double>
 mctrue::BackTrackMatcherAlg::getHitEffPur(
@@ -27,7 +28,7 @@ mctrue::BackTrackMatcherAlg::getHitEffPur(
     // use the cheat::BackTracker to find purity and efficiency for these hits
     double purity     = fBT->HitCollectionPurity(id, hits);
     double efficiency = fBT->HitCollectionEfficiency(id, hits, allHits, view);
-    return std::make_pair(purity,efficiency);
+    return std::make_pair(efficiency,purity);
 }
 
 std::pair<double,double>
@@ -44,7 +45,7 @@ mctrue::BackTrackMatcherAlg::getHitChargeEffPur(
     // use the cheat::BackTracker to find purity and efficiency for these hits
     double purity     = fBT->HitChargeCollectionPurity(id, hits);
     double efficiency = fBT->HitChargeCollectionEfficiency(id, hits, allHits, view);
-    return std::make_pair(purity,efficiency);
+    return std::make_pair(efficiency,purity);
 }
 
 const simb::MCParticle*
@@ -91,19 +92,24 @@ mctrue::BackTrackMatcherAlg::getMatchedSetsOfHits(
                 float minHitPur, float minHitEnergyPur,
                 float& hitEff, float& hitEnergyEff)
 {
+  std::cout << "BackTrackMatcherAlg::getMatchedSetsOfHits called\n";
   hitEff = -1;
   hitEnergyEff = -1;
   std::vector<size_t> result;
   const std::vector< art::Ptr<recob::Hit> > allHits;
   for (unsigned iTrack=0; iTrack<fmh.size(); iTrack++)
   {
+    std::cout << "iTrack: "<< iTrack << "\n";
     const std::vector< art::Ptr<recob::Hit> > thisTrackHits = fmh.at(iTrack);
+    std::cout << "nhits: "<< thisTrackHits.size() << "\n";
     auto hiteffpur = getHitEffPur(mcparticle,thisTrackHits,allHits);
+    std::cout << "hiteff: "<< hiteffpur.first << " hitpur: "<< hiteffpur.second << "\n";
     if(hiteffpur.second < minHitPur)
     {
       continue;
     }
     auto chargeeffpur = getHitChargeEffPur(mcparticle,thisTrackHits,allHits);
+    std::cout << "chargeeff: "<< chargeeffpur.first << " chargepur: "<< chargeeffpur.second << "\n";
     if(chargeeffpur.second < minHitEnergyPur)
     {
       continue;
