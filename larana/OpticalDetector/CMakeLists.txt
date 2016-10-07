@@ -35,7 +35,7 @@ art_make(
                            larsim_PhotonPropagation_PhotonVisibilityService_service
                            larsim_MCCheater_BackTracker_service
                            larevt_Filters
-                           lardata_RecoObjects
+                           lardata_RecoObjects larreco_Deprecated
                            lardataobj_RecoBase
                            lardataobj_MCBase
                            larreco_RecoAlg
@@ -45,7 +45,7 @@ art_make(
                            larsim_TriggerAlgo_TriggerAlgoMicroBoone_service
                            lardata_Utilities
                            lardataobj_RawData
-                           lardata_AnalysisAlg
+                           larreco_Calorimetry larana_ParticleIdentification
                            lardataobj_AnalysisBase
                            larsim_RandomUtils_LArSeedService_service
                            nusimdata_SimulationBase
