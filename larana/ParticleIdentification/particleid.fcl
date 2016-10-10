@@ -16,9 +16,9 @@ standard_pidaanalyzer:
   PIDAAlg:          @local::standard_pidaalg
 }
 
-standard_liklihoodpidmaker:
+standard_likelihoodpidmaker:
 {
-  module_type:                "LikeelihoodPIDMaker"
+  module_type:                "LikelihoodPIDMaker"
   CaloTag:                    "calo"
   PIDTag:                     "pid"
   TrackTag:                   "pmtrack"
