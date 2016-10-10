@@ -17,7 +17,12 @@
 //c++ includes
 #include <map>
 
-class LikelihoodAlg
+namespace pid 
+{
+  class LikelihoodAlg;
+}
+
+class pid::LikelihoodAlg
 {
   public:
     LikelihoodAlg(fhicl::ParameterSet const& pset);

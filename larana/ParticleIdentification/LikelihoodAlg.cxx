@@ -4,7 +4,7 @@
 #include "LikelihoodAlg.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
-LikelihoodAlg::LikelihoodAlg(fhicl::ParameterSet const& pset): fPDFFile(nullptr)
+pid::LikelihoodAlg::LikelihoodAlg(fhicl::ParameterSet const& pset): fPDFFile(nullptr)
 {
   //Get needed parameters from a fcl parameter set
   std::string pdfFileName = pset.get<std::string>("PDFFileName"); //name of the file that contains TH2D PDFs to be used
@@ -53,12 +53,12 @@ LikelihoodAlg::LikelihoodAlg(fhicl::ParameterSet const& pset): fPDFFile(nullptr)
   }
 } //end constructor
 
-LikelihoodAlg::~LikelihoodAlg()
+pid::LikelihoodAlg::~LikelihoodAlg()
 { 
   //I think we can and should leave this empty since all dynamic objects are owned by ROOT
 } //end destructor
 
-TH2D* LikelihoodAlg::PrepHisto(const TH2D* histo)
+TH2D* pid::LikelihoodAlg::PrepHisto(const TH2D* histo)
 {
   TH2D* retVal = (TH2D*)(histo->Clone());
   for(int xbin = 0; xbin < retVal->GetNbinsX(); ++xbin)
@@ -79,7 +79,7 @@ TH2D* LikelihoodAlg::PrepHisto(const TH2D* histo)
   return retVal;
 }
 
-std::map<int, double> LikelihoodAlg::CalcLikelihood(const anab::Calorimetry &calo)
+std::map<int, double> pid::LikelihoodAlg::CalcLikelihood(const anab::Calorimetry &calo)
 {
   std::map<int, double> result;
   size_t iPlane = calo.PlaneID().Plane;
@@ -96,7 +96,7 @@ std::map<int, double> LikelihoodAlg::CalcLikelihood(const anab::Calorimetry &cal
   return result;
 } //end public overload of CalcLikelihood
 
-double LikelihoodAlg::CalcLikelihood(std::pair<int, TH2D*> pdfPair, const anab::Calorimetry &calo) //calculate log likelihood for an 
+double pid::LikelihoodAlg::CalcLikelihood(std::pair<int, TH2D*> pdfPair, const anab::Calorimetry &calo) //calculate log likelihood for an 
                                                                                                                   //individual particle
 {
   const auto resR = calo.fResidualRange;
@@ -116,7 +116,7 @@ double LikelihoodAlg::CalcLikelihood(std::pair<int, TH2D*> pdfPair, const anab::
   return likelihood;
 } //end private overload of CalcLikelihood
 
-std::vector<int> LikelihoodAlg::getPDGs() const
+std::vector<int> pid::LikelihoodAlg::getPDGs() const
 {
   if (fPDFMaps.size() == 0)
   {

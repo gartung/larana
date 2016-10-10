@@ -46,7 +46,7 @@
 #include <map>
 #include <algorithm>
 
-namespace LikelihoodPIDMaker {
+namespace pid {
 
   class LikelihoodPIDMaker : public art::EDAnalyzer {
   public:
@@ -819,5 +819,5 @@ namespace LikelihoodPIDMaker {
 
 } //namespace LikelihoodPIDMaker
 
-DEFINE_ART_MODULE(LikelihoodPIDMaker::LikelihoodPIDMaker)
+DEFINE_ART_MODULE(pid::LikelihoodPIDMaker)
 #endif
