@@ -49,5 +49,14 @@ standard_likelihoodpidmaker:
   MaxDistToVertex:            1.
 }
 
+standard_likelihoodpid:
+{
+  module_type: "LikelihoodPID"
+  CaloLabel:   "calo"
+  TrackLabel:  "pmtrack"
+  LikelihoodPIDAlg: @local::standard_likelihoodpidalg
+  LikelihoodRatioCut: 0
+}
+
 
 END_PROLOG

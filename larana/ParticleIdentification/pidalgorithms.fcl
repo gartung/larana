@@ -17,4 +17,12 @@ standard_pidaalg:
   KDEBandwidths:    [ -1, 0.5, 1, 2, 3, 5 ]
 }
 
+standard_likelihoodpidalg:
+{
+  RangeCut: 30.
+  PDFFileName: "LHPID_Templates.root"
+  PDGs: [ 211, 2212, -13, 321]
+  nPlanes: 2
+}
+
 END_PROLOG
