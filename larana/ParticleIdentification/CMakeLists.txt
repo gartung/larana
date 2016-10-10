@@ -27,6 +27,7 @@ art_make(
           MODULE_LIBRARIES 
 			nusimdata_SimulationBase
 	  		larana_ParticleIdentification
+            larana_TruthMatching
                         lardataobj_RecoBase
                         larcore_Geometry
                         larcore_Geometry_Geometry_service

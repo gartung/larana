@@ -16,4 +16,38 @@ standard_pidaanalyzer:
   PIDAAlg:          @local::standard_pidaalg
 }
 
+standard_liklihoodpidmaker:
+{
+  module_type:                "LikeelihoodPIDMaker"
+  CaloTag:                    "calo"
+  PIDTag:                     "pid"
+  TrackTag:                   "pmtrack"
+  AssnTrkHitTag:              "pmtrack"
+  AssnTrkVrtxTag:             "pmtrack"
+  TruthTag:                   "largeant"
+  PosCut:                     5.0
+  AngCut:                     0.1
+  PrimOnly:                   true
+  Contained:                  true
+  ContainedStart:             true
+  PDG:                        0 #analyze all PDG codes
+  dEdxProfNBins:              325
+  dEdxProfMax:                26
+  MaxEndEn:                   100000000.0
+  NdEdxBins:                  200
+  dEdxMax:                    100
+  WriteTree:                  false
+  WriteTrueTree:              false
+  OldTruthMatching:           true # if true use old method, else BackTrackMatching decides
+  BackTrackMatching:          false # if true use backtracker, else use startposangle
+  MinHitPur:                  0.9 #fraction
+  MinHitEnergyPur:            0.9 #fraction
+  MaxAngleDeg:                90
+  XMargin:                    0.
+  YMargin:                    0.
+  ZMargin:                    0.
+  MaxDistToVertex:            1.
+}
+
+
 END_PROLOG
