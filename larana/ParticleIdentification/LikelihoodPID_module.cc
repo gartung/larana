@@ -23,7 +23,7 @@
 #include "cetlib/exception.h"
 
 //LArIAT includes
-#include "LArIATRecoAlg/LikelihoodAlg.h"
+#include "larana/ParticleIdentification/LikelihoodAlg.h"
 
 //LArSoft includes
 #include "lardataobj/AnalysisBase/ParticleID.h"
@@ -73,7 +73,7 @@ public:
 private:
 
   // Declare member data here.
-  std::unique_ptr<LikelihoodAlg> fLikeAlg; //algorithm for calculating likelihood ratios for dE/dx vs. residual range
+  std::unique_ptr<pid::LikelihoodAlg> fLikeAlg; //algorithm for calculating likelihood ratios for dE/dx vs. residual range
   art::InputTag fTrackLabel;                   //input tag for tracks we will use
   art::InputTag fCaloLabel;                   //input tag for calo objects we will use
   double      fLikelihoodRatioCut;         //Likelihood ratio between largest two likelihoods must be larger than this value to produce an anab::ParticleID 
@@ -231,7 +231,7 @@ void pid::LikelihoodPID::endSubRun(art::SubRun & sr)
 void pid::LikelihoodPID::reconfigure(fhicl::ParameterSet const & p)
 {
   // Implementation of optional member function here.
-  fLikeAlg.reset(new LikelihoodAlg(p.get<fhicl::ParameterSet>("LikelihoodPIDAlg"))); //(re-)initialize likelihood algorithm
+  fLikeAlg.reset(new pid::LikelihoodAlg(p.get<fhicl::ParameterSet>("LikelihoodPIDAlg"))); //(re-)initialize likelihood algorithm
                                         //Among many other functions, PDFs are searched for and normalized here.
                                         //By convention in this module, the PDFs must be named pion, proton, muon, and kaon
 
