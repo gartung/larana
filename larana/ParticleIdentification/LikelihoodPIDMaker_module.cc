@@ -100,7 +100,8 @@ namespace LikelihoodPIDMaker {
     art::InputTag fPIDTag; //tag of the module that produced anab::ParticleID objects
     art::InputTag fTruthTag; //tag of the module that produced simb::MCParticle objects
 
-    size_t fNPlanes; //number of planes in this detector from the geometry service
+    size_t fNPlanes;
+
     double fPosCut; 
     double fAngCut;
 
@@ -318,6 +319,7 @@ namespace LikelihoodPIDMaker {
       fMinX = std::min(fMinX,tpc.MinX());
       fMinY = std::min(fMinY,tpc.MinY());
       fMinZ = std::min(fMinZ,tpc.MinZ());
+      mf::LogWarning("LikelihoodPIDMaker: ") << " TPC NPlanes: "<< tpc.Nplanes() <<" width: "<<2*tpc.HalfWidth()<<"\n";
     }
     fMaxX -= fXMargin;
     fMaxY -= fYMargin;
@@ -325,7 +327,7 @@ namespace LikelihoodPIDMaker {
     fMinX += fXMargin;
     fMinY += fYMargin;
     fMinZ += fZMargin;
-    fNPlanes = geom->Nplanes();
+    fNPlanes = geom->MaxPlanes();
 
     art::ServiceHandle<art::TFileService> tfs;
 
@@ -560,7 +562,8 @@ namespace LikelihoodPIDMaker {
         for(const auto & calo: calos)
         {
           //const auto& calo = *(fmCalo.at(0).at(cIt)); //at(0) since only one track was used to make this findManyP object
-          size_t plane = calo->PlaneID().Plane;
+          //size_t plane = calo->PlaneID().Plane;
+          const auto plane = calo->PlaneID().Plane;
           const auto& dEdx = calo->dEdx();
           const auto& resRange = calo->ResidualRange();
           const auto& pitch = calo->TrkPitchVec();
@@ -570,6 +573,16 @@ namespace LikelihoodPIDMaker {
 
           std::string sPDG = std::to_string(PDG); 
           std::string pNum = std::to_string(plane);
+          if(plane >= fNPlanes)
+          {
+            std::string message = "Plane number from calo object is greater than number of planes from geometry.";
+            message += "plane: " + std::to_string(plane);
+            message += " nPlanes: " + std::to_string(fNPlanes);
+            message += " nHits: " + std::to_string(dEdx.size());
+            //throw cet::exception("IvalidValue",message);
+            mf::LogError("LikelihoodPIDMaker: ") << message << "\n";
+            continue;
+          }
           if(!fdEdxHists.at(plane)[PDG]) 
           {
             fdEdxHists.at(plane)[PDG] = tfs->make<TH1D>(
