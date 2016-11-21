@@ -6,9 +6,9 @@ services:
 {
   # Load the service that manages root files for histograms.
   TFileService: { fileName: "ntuple.root" }
-  Timing:       {}
-  SimpleMemoryCheck:     { ignoreTotal: 1 } # default is one
-  user:         @local::dunefd_services
+  TimeTracker:  {}
+  MemoryTracker:     { ignoreTotal: 1 } # default is one
+                @table::dunefd_services
 }
 
 
