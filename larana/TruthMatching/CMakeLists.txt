@@ -5,7 +5,7 @@ art_make(
             larsim_MCCheater_BackTracker_service
 			nusimdata_SimulationBase
                         lardataobj_AnalysisBase
-			lardata_AnalysisAlg
+			larreco_Calorimetry
                         lardata_Utilities
                         larcore_Geometry
                         ${ART_FRAMEWORK_CORE}
