@@ -8,7 +8,6 @@ pid::LikelihoodAlg::LikelihoodAlg(fhicl::ParameterSet const& pset): fPDFFile(nul
 {
   //Get needed parameters from a fcl parameter set
   std::string pdfFileName = pset.get<std::string>("PDFFileName"); //name of the file that contains TH2D PDFs to be used
-  fRangeCut = pset.get<double>("RangeCut"); //See LikelihoodAlg.h
   std::vector<int> PDGs = pset.get<std::vector<int>>("PDGs"); //These names will be used to get PDFs from the file with pdfFileName,
                                                                                         //and each name will have a likelihood result mapped to it.  
   size_t nPlanes = pset.get<size_t>("nPlanes"); //How many planes to prepare likelihoods for
@@ -101,17 +100,33 @@ double pid::LikelihoodAlg::CalcLikelihood(std::pair<int, TH2D*> pdfPair, const a
 {
   const auto resR = calo.fResidualRange;
   const auto dedx = calo.fdEdx;
-  const auto pitch = calo.TrkPitchVec();
   double likelihood = 0.; 
+  bool goodLikelihoodPoints = false;
   TH2D* hist = pdfPair.second; //temporary pointer to PDF to be used
+
+  TAxis* resRAxis = hist->GetXaxis();
+  int resRNbins = resRAxis->GetNbins();
+  double resRMin = resRAxis->GetBinLowEdge(1);
+  double resRMax = resRAxis->GetBinLowEdge(resRNbins);
+  TAxis* dedxAxis = hist->GetYaxis();
+  int dedxNbins = dedxAxis->GetNbins();
+  double dedxMin = dedxAxis->GetBinLowEdge(1);
+  double dedxMax = dedxAxis->GetBinLowEdge(dedxNbins);
 
   //assuming that calorimetry object vectors are simultaneous
   for(size_t it = 0; it < resR.size() && it < dedx.size(); ++it)
   {
-    if(resR[it] > fRangeCut) continue;
-    double dedxVal = dedx[it]*pitch[it], resRVal = resR[it]; //Updated on 5/30/2016: Multiply by pitch before calculating likelihood.  
+    double dedxVal = dedx[it];
+    double resRVal = resR[it];
+    if(resRVal < resRMin || resRVal > resRMax) continue;
+    if(dedxVal < dedxMin || dedxVal > dedxMax) continue;
     double content = hist->GetBinContent(hist->FindBin(resRVal, dedxVal));
     likelihood += log(content); //log of product is sum of logs
+    goodLikelihoodPoints = true;
+  }
+  if (!goodLikelihoodPoints)
+  {
+    likelihood = -999.;
   }
   return likelihood;
 } //end private overload of CalcLikelihood

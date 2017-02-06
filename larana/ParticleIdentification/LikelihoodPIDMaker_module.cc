@@ -140,9 +140,8 @@ namespace pid {
     TTree* fTree; //tree to hold dEdx and residual range
     TTree* fTree_alltruth; //tree non-vector truth vals even for unmatched true trajectories
     std::vector<float> fTree_resRange;
-    std::vector<float> fTree_pitchCorr;
-    std::vector<float> fTree_dEdx_raw;
-    std::vector<float> fTree_dEdx_pitchCorr;
+    std::vector<float> fTree_pitch;
+    std::vector<float> fTree_dEdx;
     std::vector<UInt_t> fTree_plane;
     std::vector<float> fTree_interpE;
     std::vector<float> fTree_interpP;
@@ -158,6 +157,7 @@ namespace pid {
     float fTree_endPosX;
     float fTree_endPosY;
     float fTree_endPosZ;
+    float fTree_trkLen;
     float fTree_trkCurvyness;
     float fTree_matchStartDistance;
     float fTree_matchStartAngle;
@@ -354,9 +354,8 @@ namespace pid {
     {
       fTree = tfs->make<TTree>("tree","Tree of dEdx, resRange, etc.");
       fTree->Branch("resRange",&fTree_resRange);
-      fTree->Branch("pitchCorr",&fTree_pitchCorr);
-      fTree->Branch("dEdx_raw",&fTree_dEdx_raw);
-      fTree->Branch("dEdx_pitchCorr",&fTree_dEdx_pitchCorr);
+      fTree->Branch("pitch",&fTree_pitch);
+      fTree->Branch("dEdx",&fTree_dEdx);
       fTree->Branch("plane",&fTree_plane);
 
       fTree->Branch("interpE",&fTree_interpE);
@@ -375,6 +374,7 @@ namespace pid {
       fTree->Branch("endPosX",&fTree_endPosX,"endPosX/F");
       fTree->Branch("endPosY",&fTree_endPosY,"endPosY/F");
       fTree->Branch("endPosZ",&fTree_endPosZ,"endPosZ/F");
+      fTree->Branch("trkLen",&fTree_trkLen,"trkLen/F");
       fTree->Branch("trkCurvyness",&fTree_trkCurvyness,"trkCurvyness/F");
 
       fTree->Branch("matchStartDistance",&fTree_matchStartDistance,"matchStartDistance/F");
@@ -524,9 +524,8 @@ namespace pid {
         if (fWriteTree)
         {
           fTree_resRange.clear();
-          fTree_pitchCorr.clear();
-          fTree_dEdx_raw.clear();
-          fTree_dEdx_pitchCorr.clear();
+          fTree_pitch.clear();
+          fTree_dEdx.clear();
           fTree_plane.clear();
           fTree_interpP.clear();
           fTree_interpE.clear();
@@ -548,6 +547,7 @@ namespace pid {
         fTree_endPosX = recoMatch->End().X();
         fTree_endPosY = recoMatch->End().Y();
         fTree_endPosZ = recoMatch->End().Z();
+        fTree_trkLen = recoMatch->Length();
         fTree_matchStartDistance = (recoMatch->Vertex() - truth.Position(0).Vect()).Mag();
         fTree_matchStartAngle = recoMatch->VertexDirection().Angle(truth.Momentum(0).Vect());
         fTree_matchEndDistance = (recoMatch->End() - truth.EndPosition().Vect()).Mag();
@@ -618,25 +618,22 @@ namespace pid {
           mf::LogInfo("CaloInfo") << "Calo Plane: " << calo->PlaneID() << "\n";
           for(size_t dEdxIt = 0; dEdxIt < dEdxSize; ++dEdxIt)
           {
-            double range = resRange.at(dEdxIt);
-            double pitchCorr = pitch[dEdxIt];
-            double dEdx_raw = dEdx[dEdxIt];
-            double dEdx_pitchCorr = dEdx_raw*pitchCorr;
-            fdEdxHists.at(plane)[PDG]->Fill(dEdx_pitchCorr);
-            fdEdXVsRangeHists.at(plane)[PDG]->Fill(range, dEdx_pitchCorr);
-            mf::LogInfo("dEdxPrint") << "Res Range: " << range 
-                << ", dE/dx raw: " << dEdx_raw
-                << ", dE/dx pitchCor " << dEdx_pitchCorr
-                << ", pitch " << pitchCorr
+            double resRangeVal = resRange.at(dEdxIt);
+            double pitchVal = pitch[dEdxIt];
+            double dEdxVal = dEdx[dEdxIt];
+            fdEdxHists.at(plane)[PDG]->Fill(dEdxVal);
+            fdEdXVsRangeHists.at(plane)[PDG]->Fill(resRangeVal, dEdxVal);
+            mf::LogInfo("dEdxPrint") << "Res Range: " << resRangeVal
+                << ", dE/dx: " << dEdxVal
+                << ", pitch " << pitchVal
                 << std::endl;
             if (fWriteTree)
             {
               fTree_nCaloHits++;
               fTree_plane.push_back(plane);
-              fTree_resRange.push_back(range);
-              fTree_pitchCorr.push_back(pitchCorr);
-              fTree_dEdx_raw.push_back(dEdx_raw);
-              fTree_dEdx_pitchCorr.push_back(dEdx_pitchCorr);
+              fTree_resRange.push_back(resRangeVal);
+              fTree_pitch.push_back(pitchVal);
+              fTree_dEdx.push_back(dEdxVal);
               
               TLorentzVector interpMomentum;
               double interpDistance;
