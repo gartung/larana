@@ -38,8 +38,6 @@ class pid::LikelihoodAlg
     TFile* fPDFFile; //File with the probability density functions to be used.  Name read from fcl file.
     std::vector<std::map<int, TH2D*> > fPDFMaps; //map of particle name to probability density function histogram for each wire plane
 
-    double fRangeCut; //Ignore points with residual range less than this value.  Read from fcl file.  
-
     TH2D* PrepHisto(const TH2D* histo);
 };
 
