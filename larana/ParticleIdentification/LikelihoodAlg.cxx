@@ -66,7 +66,7 @@ TH2D* pid::LikelihoodAlg::PrepHisto(const TH2D* histo)
     {
       int bin = retVal->GetBin(xbin, ybin);
       int content = retVal->GetBinContent(bin);
-      if(content == 0) retVal->SetBinContent(bin, 0.001); //changed from 1.0 to 0.001 by aoliv23@lsu.edu on 2/24/2016
+      if(content == 0) retVal->SetBinContent(bin, 1e-1);
     }
   }
    double integral = retVal->Integral(0, retVal->GetNbinsX(), 0, retVal->GetNbinsY());
