@@ -54,7 +54,11 @@ mctrue::StartPosDirMatcherAlg::getBestMatch(
   {
     // First from the front of the track
     const TVector3 vertex = (*track)->Vertex();
-    double vertexAngle = mcpStartMom.Angle(vertex);
+    const auto trackStartDirDispVect = (*track)->StartDirection();
+    const TVector3 trackStartDir = TVector3(trackStartDirDispVect.X(), 
+                                            trackStartDirDispVect.Y(), 
+                                            trackStartDirDispVect.Z());
+    double vertexAngle = mcpStartMom.Angle(trackStartDir);
     if (vertexAngle > TMath::PiOver2())
     {
       vertexAngle -= TMath::PiOver2();
@@ -71,7 +75,11 @@ mctrue::StartPosDirMatcherAlg::getBestMatch(
     }
     // Then end of track
     const TVector3 trkEnd = (*track)->End();
-    double endAngle = mcpStartMom.Angle(trkEnd);
+    const auto trackEndDirDispVect = (*track)->EndDirection();
+    const TVector3 trackEndDir = TVector3(trackEndDirDispVect.X(), 
+                                          trackEndDirDispVect.Y(), 
+                                          trackEndDirDispVect.Z());
+    double endAngle = mcpStartMom.Angle(trackEndDir);
     if (endAngle > TMath::PiOver2())
     {
       endAngle -= TMath::PiOver2();
