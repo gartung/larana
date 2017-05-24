@@ -82,6 +82,11 @@ std::map<int, double> pid::LikelihoodAlg::CalcLikelihood(const anab::Calorimetry
 {
   std::map<int, double> result;
   size_t iPlane = calo.PlaneID().Plane;
+  if (iPlane > 100)
+  {
+          mf::LogWarning("LikelihoodAlg") << "plane " << iPlane << " seems like too many planes, returning empty result.\n";
+          return result;
+  }
   if (iPlane >= fPDFMaps.size())
   {
     throw cet::exception("LikelihoodAlg::CalcLikelihood:InvalidPlane") << "This calo object is for plane "<< iPlane << "while we only have "<<fPDFMaps.size() <<"planes\n";
