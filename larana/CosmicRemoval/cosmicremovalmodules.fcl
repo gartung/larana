@@ -45,6 +45,13 @@ standard_cosmicpfparticletagger:
     TrackModuleLabel:      "track"
 }
 
+standard_neutrinopfparticletagger:
+{
+    module_type: "NeutrinoPFParticleTagger"
+    PFParticleModuleLabel: "pandoraCosmic"
+    TrackModuleLabel:      "pandoraCosmic"
+}
+
 standard_cosmicpcaxistagger:
 {
     module_type:             "CosmicPCAxisTagger"
