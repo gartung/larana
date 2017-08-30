@@ -58,7 +58,11 @@ private:
     std::string fTrackModuleLabel;
     
     TTree* fEventTree;
-    Int_t  npfparticles;
+    Int_t run;
+    Int_t subrun;
+    Int_t event;
+    Int_t npfparticles;
+    Int_t trk_id[max_pfparticles];
     Float_t start_x[max_pfparticles];
     Float_t end_x[max_pfparticles];
     Float_t start_y[max_pfparticles];
@@ -69,6 +73,7 @@ private:
     Float_t mindis_0[max_pfparticles];
     Float_t mindis_1[max_pfparticles];
     Int_t origin[max_pfparticles];
+    Int_t pdg[max_pfparticles];
 };
 
 neutrino::NeutrinoPFParticleTagger::NeutrinoPFParticleTagger(fhicl::ParameterSet const & p)
@@ -105,6 +110,10 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
     
     auto const* geom = lar::providerFrom<geo::Geometry>();
     const geo::TPCGeo &tpc = geom->TPC(0);
+    
+    run = evt.run();
+    subrun = evt.subRun();
+    event = evt.id().event(); 
     
     if (!pfParticleHandle.isValid())
     {
@@ -151,25 +160,32 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
       for(size_t h = 0; h < allHits.size(); ++h){
           art::Ptr<recob::Hit> hit = allHits[h];
           std::vector<sim::IDE> ides;
-          std::vector<sim::TrackIDE> TrackIDs = bt->HitToTrackID(hit);
+          std::vector<sim::TrackIDE> TrackIDs = bt->HitToEveID(hit);
     
     for(size_t e = 0; e < TrackIDs.size(); ++e){
-      trkide[bt->TrackIDToMCTruth(TrackIDs[e].trackID)->Origin()] += TrackIDs[e].energy;
+      trkide[TrackIDs[e].trackID] += TrackIDs[e].energy;
     }
       }
       // Work out which IDE despoited the most charge in the hit if there was more than one.
       double maxe = -1;
       double tote = 0;
+      int Trackid = 0;
       for (std::map<int,double>::iterator ii = trkide.begin(); ii!=trkide.end(); ++ii){
-    tote += ii->second;
-    if ((ii->second)>maxe){
-      maxe = ii->second;
-      if(pfPartIdx < max_pfparticles) origin[pfPartIdx]=ii->first;
-    }
-      }
+          tote += ii->second;
+          if ((ii->second)>maxe){
+               maxe = ii->second;
+              //if(pfPartIdx < max_pfparticles) origin[pfPartIdx]=ii->first;
+              Trackid=ii->first;
+         }
+     }
 	
-	
-	
+     const simb::MCParticle* particle=bt->TrackIDToParticle(Trackid);	    
+     if(particle){
+       if(pfPartIdx < max_pfparticles){ 
+           pdg[pfPartIdx] = particle->PdgCode();
+	   origin[pfPartIdx] = bt->TrackIDToMCTruth(Trackid)->Origin();
+       }
+     }	
 	
 	art::Ptr<recob::PFParticle> pfParticle(pfParticleHandle, pfPartIdx);
         
@@ -192,13 +208,14 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
             continue;
         }*/
 	
-	auto long_length =1e-10;
+	auto long_length =-1;
 	auto trk_start_x=0;
 	auto trk_end_x=0;
 	auto trk_start_y=0;
 	auto trk_end_y=0;
 	auto trk_start_z=0;
 	auto trk_end_z=0;
+	auto trkid=0;
 	float mindis0 = FLT_MAX;
         float mindis1 = FLT_MAX;
 	size_t track_vec_index=-1; 
@@ -220,6 +237,7 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 	       trk_end_y=end.Y();
 	       trk_start_z=pos.Z();
 	       trk_end_z=end.Z();
+	       trkid = track.key();
 	    }
 	}
 	
@@ -233,6 +251,7 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 	      start_z[pfPartIdx] = trk_start_z;
 	      end_z[pfPartIdx] = trk_end_z;
 	      max_trklen[pfPartIdx] = long_length;
+	      trk_id[pfPartIdx] = trkid;
 	      
 	      if (std::abs(trk_start_y - tpc.MinY())<mindis0) mindis0 = std::abs(trk_start_y- tpc.MinY());
 	      if (std::abs(trk_start_y - tpc.MaxY())<mindis0) mindis0 = std::abs(trk_start_y - tpc.MaxY());
@@ -257,6 +276,7 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 	    max_trklen[pfPartIdx] = -9999;
 	    mindis_0[pfPartIdx] = -9999;
 	    mindis_1[pfPartIdx] = -9999;
+	    trk_id[pfPartIdx] = -9999;
 	  }
 	
 	}
@@ -276,6 +296,9 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 
 void neutrino::NeutrinoPFParticleTagger::reset(){
      npfparticles=0;
+     run = -99999;
+     subrun = -99999;
+     event = -99999;
      
      for (int i = 0; i < max_pfparticles; i++){
           start_x[i] = -9999;
@@ -288,6 +311,8 @@ void neutrino::NeutrinoPFParticleTagger::reset(){
 	  mindis_0[i] = -9999;
 	  mindis_1[i] = -9999;
 	  origin[i] = -9999;
+	  trk_id[i] = -9999;
+	  pdg[i] = -9999;
      }
 }
 
@@ -296,7 +321,11 @@ void neutrino::NeutrinoPFParticleTagger::beginJob()
  art::ServiceHandle<art::TFileService> tfs;
  
  fEventTree = tfs->make<TTree>("Event", "Event Tree from Reco");
+ fEventTree->Branch("run",&run,"run/I");
+ fEventTree->Branch("subrun",&subrun,"subrun/I");
+ fEventTree->Branch("event",&event,"event/I");
  fEventTree->Branch("npfparticles",&npfparticles,"npfparticles/I");
+ fEventTree->Branch("trk_id",trk_id,"trk_id[npfparticles]/I");
  fEventTree->Branch("start_x",start_x,"start_x[npfparticles]/F");
  fEventTree->Branch("end_x",end_x,"end_x[npfparticles]/F");
  fEventTree->Branch("start_y",start_y,"start_y[npfparticles]/F");
@@ -307,6 +336,7 @@ void neutrino::NeutrinoPFParticleTagger::beginJob()
  fEventTree->Branch("mindis_1",mindis_1,"mindis_1[npfparticles]/F");
  fEventTree->Branch("max_trklen",max_trklen,"max_trklen[npfparticles]/F");
  fEventTree->Branch("origin",origin,"origin[npfparticles]/I");
+ fEventTree->Branch("pdg",pdg,"pdg[npfparticles]/I");
 }
 
 void neutrino::NeutrinoPFParticleTagger::reconfigure(fhicl::ParameterSet const & p)
