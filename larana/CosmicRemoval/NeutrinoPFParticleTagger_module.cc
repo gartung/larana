@@ -20,6 +20,7 @@
 #include "lardataobj/RecoBase/Hit.h"
 #include "lardataobj/RecoBase/Track.h"
 #include "lardataobj/RecoBase/Cluster.h"
+#include "lardataobj/RecoBase/OpFlash.h"
 #include "larsim/MCCheater/BackTracker.h"
 
 #include "lardataobj/AnalysisBase/CosmicTag.h"
@@ -56,6 +57,7 @@ public:
 private:
     std::string fPFParticleModuleLabel;
     std::string fTrackModuleLabel;
+    std::string fFlashModuleLabel;
     
     TTree* fEventTree;
     Int_t run;
@@ -107,6 +109,18 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
     art::FindManyP<recob::Cluster> fmcp(pfParticleHandle, evt, fPFParticleModuleLabel);
     
     art::ServiceHandle<cheat::BackTracker> bt;
+    
+    art::Handle< std::vector<recob::OpFlash> > flashListHandle;
+    std::vector<art::Ptr<recob::OpFlash> > flashlist;
+    if (evt.getByLabel(fFlashModuleLabel, flashListHandle)) art::fill_ptr_vector(flashlist, flashListHandle);
+    
+    std::vector<float> flash_x;
+    geo::PlaneID pid(0, 0, 0);
+    auto const* det = lar::providerFrom<detinfo::DetectorPropertiesService>();
+    
+    for(size_t i=0; i < flashlist.size(); i++){
+        flash_x.push_back(det->ConvertTicksToX(flashlist[i]->Time()/det->SamplingRate()*1e3 + det->GetXTicksOffset(pid),pid));
+    }
     
     auto const* geom = lar::providerFrom<geo::Geometry>();
     const geo::TPCGeo &tpc = geom->TPC(0);
@@ -343,6 +357,7 @@ void neutrino::NeutrinoPFParticleTagger::reconfigure(fhicl::ParameterSet const &
 {
     fPFParticleModuleLabel = p.get< std::string >("PFParticleModuleLabel");
     fTrackModuleLabel      = p.get< std::string >("TrackModuleLabel", "track");
+    fFlashModuleLabel      = p.get< std::string >("FlashModuleLabel");
 }
 
 void neutrino::NeutrinoPFParticleTagger::endJob() {

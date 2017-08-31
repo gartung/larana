@@ -50,6 +50,7 @@ standard_neutrinopfparticletagger:
     module_type: "NeutrinoPFParticleTagger"
     PFParticleModuleLabel: "pandoraCosmic"
     TrackModuleLabel:      "pandoraCosmic"
+    FlashModuleLabel:      "simpleFlashCosmic"
 }
 
 standard_cosmicpcaxistagger:
