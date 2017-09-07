@@ -25,6 +25,7 @@
 
 #include "lardataobj/AnalysisBase/CosmicTag.h"
 #include "larreco/RecoAlg/SpacePointAlg.h"
+#include "larreco/RecoAlg/TrajectoryMCSFitter.h"
 #include "lardata/Utilities/AssociationUtil.h"
 #include "lardata/DetectorInfoServices/DetectorPropertiesService.h"
 #include "lardata/DetectorInfoServices/LArPropertiesService.h"
@@ -58,6 +59,7 @@ private:
     std::string fPFParticleModuleLabel;
     std::string fTrackModuleLabel;
     std::string fFlashModuleLabel;
+    trkf::TrajectoryMCSFitter mcsfitter;
     
     TTree* fEventTree;
     Int_t run;
@@ -76,10 +78,14 @@ private:
     Float_t mindis_1[max_pfparticles];
     Int_t origin[max_pfparticles];
     Int_t pdg[max_pfparticles];
+    Float_t flash_x_diff[max_pfparticles];
+    Float_t cathode_pierce_val[max_pfparticles];
+    Float_t flash_z_diff[max_pfparticles];
+    Float_t delta_ll[max_pfparticles];
 };
 
 neutrino::NeutrinoPFParticleTagger::NeutrinoPFParticleTagger(fhicl::ParameterSet const & p)
-// :
+ :mcsfitter(p.get< fhicl::ParameterSet >("fitter"))
 // Initialize member data here.
 {
     this->reconfigure(p);
@@ -103,6 +109,8 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
     //std::unique_ptr< art::Assns<recob::PFParticle, anab::CosmicTag > > assnOutCosmicTagPFParticle( new art::Assns<recob::PFParticle, anab::CosmicTag>);
     
     // Recover handle for PFParticles
+    reset();
+    
     art::Handle<std::vector<recob::PFParticle> > pfParticleHandle;
     evt.getByLabel( fPFParticleModuleLabel, pfParticleHandle);
     
@@ -222,17 +230,18 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
             continue;
         }*/
 	
-	auto long_length =-1;
-	auto trk_start_x=0;
-	auto trk_end_x=0;
-	auto trk_start_y=0;
-	auto trk_end_y=0;
-	auto trk_start_z=0;
-	auto trk_end_z=0;
-	auto trkid=0;
+	float long_length =-1;
+	float trk_start_x=0;
+	float trk_end_x=0;
+	float trk_start_y=0;
+	float trk_end_y=0;
+	float trk_start_z=0;
+	float trk_end_z=0;
+	int trkid=0;
 	float mindis0 = FLT_MAX;
         float mindis1 = FLT_MAX;
-	size_t track_vec_index=-1; 
+	int track_vec_index=-1; 
+	float del_ll=0;
 	
 	std::cout << "************ PF particle ID : " << int(pfPartIdx) << std::endl; 
 	
@@ -252,12 +261,15 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 	       trk_start_z=pos.Z();
 	       trk_end_z=end.Z();
 	       trkid = track.key();
+	       recob::MCSFitResult result = mcsfitter.fitMcs(*track);
+	       if(trk_start_y > trk_end_y) del_ll=result.fwdLogLikelihood()-result.bwdLogLikelihood();
+	       else del_ll=result.bwdLogLikelihood()-result.fwdLogLikelihood();
 	    }
 	}
 	
 	if(pfPartIdx < max_pfparticles){
 	
-	   if(int(track_vec_index)!=-1){
+	   if(track_vec_index!=-1){
 	      start_x[pfPartIdx] = trk_start_x;
 	      end_x[pfPartIdx] = trk_end_x;
 	      start_y[pfPartIdx] = trk_start_y;
@@ -266,6 +278,8 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 	      end_z[pfPartIdx] = trk_end_z;
 	      max_trklen[pfPartIdx] = long_length;
 	      trk_id[pfPartIdx] = trkid;
+	      delta_ll[pfPartIdx] = del_ll;
+	      
 	      
 	      if (std::abs(trk_start_y - tpc.MinY())<mindis0) mindis0 = std::abs(trk_start_y- tpc.MinY());
 	      if (std::abs(trk_start_y - tpc.MaxY())<mindis0) mindis0 = std::abs(trk_start_y - tpc.MaxY());
@@ -278,27 +292,68 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 	      
 	      mindis_0[pfPartIdx] = mindis0;
 	      mindis_1[pfPartIdx] = mindis1;
-	   }
-	
-	  else{
-	    start_x[pfPartIdx] = -9999; //FLT_MIN
-	    end_x[pfPartIdx] = -9999;
-	    start_y[pfPartIdx] = -9999; 
-	    end_y[pfPartIdx] = -9999;
-	    start_z[pfPartIdx] = -9999; 
-	    end_z[pfPartIdx] = -9999;
-	    max_trklen[pfPartIdx] = -9999;
-	    mindis_0[pfPartIdx] = -9999;
-	    mindis_1[pfPartIdx] = -9999;
-	    trk_id[pfPartIdx] = -9999;
-	  }
-	
+	      
+	      float minz,minx,max_x;
+	      if(trk_start_x > trk_end_x){ 
+	         minz=trk_end_z;
+		 minx=trk_end_x;
+		 max_x=trk_start_x;
+	      }
+	      else if(trk_start_x < trk_end_x){ 
+	              minz=trk_start_z;
+		      minx=trk_start_x;
+		      max_x=trk_end_x;
+	      }
+	      
+	      else{ 
+	          minz=trk_start_z;
+		  minx=trk_start_x;
+		  max_x=trk_start_x;
+	      }
+	      
+	      
+	      std::vector<int>flash_index;
+	      
+	      for(size_t i=0; i < flashlist.size(); i++){
+	          float min_flashz = flashlist[i]->ZCenter()-flashlist[i]->ZWidth();
+		  float max_flashz = flashlist[i]->ZCenter()+flashlist[i]->ZWidth();
+		  if((minz < max_flashz) && (minz > min_flashz)) flash_index.push_back(i);
+	      }
+	   
+	      if(flash_index.size()){
+	         float min_x_diff=1e10;
+		 float min_cathode_pierce=1e10;
+		 float min_z_diff=0;
+		 for(size_t i=0; i < flash_index.size(); i++){
+		     if(TMath::Abs(flash_x[flash_index[i]]-minx) < min_x_diff){ 
+		         min_x_diff=TMath::Abs(flash_x[flash_index[i]]-minx);
+			 min_z_diff = TMath::Abs(minz-flashlist[flash_index[i]]->ZCenter());
+		     }
+		     
+		     if(TMath::Abs(max_x-flash_x[flash_index[i]]-256) < min_cathode_pierce){
+		        min_cathode_pierce = TMath::Abs(max_x-flash_x[flash_index[i]]-256);
+		     }
+		 }
+		 
+		 flash_x_diff[pfPartIdx]= min_x_diff;
+		 cathode_pierce_val[pfPartIdx] = min_cathode_pierce;
+		 flash_z_diff[pfPartIdx] = min_z_diff;
+	      }
+	      
+	      else{ 
+	         flash_x_diff[pfPartIdx]=500;
+		 cathode_pierce_val[pfPartIdx]=500;
+		 flash_z_diff[pfPartIdx] =500;
+	      }
+	      
+	      flash_index.clear();
+	    }
 	}
 	
-	std::cout<< "Track vector size : " << trackVec.size() << std::endl;
-	std::cout<< "Vector index is : " << int(track_vec_index) << std::endl; 
-	std::cout<< "Lognest Track Length is "<<long_length << std::endl;
-	std::cout<< "Track start & end X : " << trk_start_x << "  " << trk_end_x << std::endl;
+	//std::cout<< "Track vector size : " << trackVec.size() << std::endl;
+	//std::cout<< "Vector index is : " << int(track_vec_index) << std::endl; 
+	//std::cout<< "Lognest Track Length is "<<long_length << std::endl;
+	//std::cout<< "Track start & end X : " << trk_start_x << "  " << trk_end_x << std::endl;
         
    }     
     
@@ -327,6 +382,10 @@ void neutrino::NeutrinoPFParticleTagger::reset(){
 	  origin[i] = -9999;
 	  trk_id[i] = -9999;
 	  pdg[i] = -9999;
+	  flash_x_diff[i] = -9999;
+	  cathode_pierce_val[i] = -9999;
+	  flash_z_diff[i] = -9999;
+	  delta_ll[i] = -9999;
      }
 }
 
@@ -351,6 +410,10 @@ void neutrino::NeutrinoPFParticleTagger::beginJob()
  fEventTree->Branch("max_trklen",max_trklen,"max_trklen[npfparticles]/F");
  fEventTree->Branch("origin",origin,"origin[npfparticles]/I");
  fEventTree->Branch("pdg",pdg,"pdg[npfparticles]/I");
+ fEventTree->Branch("flash_x_diff",flash_x_diff,"flash_x_diff[npfparticles]/F");
+ fEventTree->Branch("cathode_pierce_val",cathode_pierce_val,"cathode_pierce_val[npfparticles]/F");
+ fEventTree->Branch("flash_z_diff",flash_z_diff,"flash_z_diff[npfparticles]/F");
+ fEventTree->Branch("delta_ll",delta_ll,"delta_ll[npfparticles]/F");
 }
 
 void neutrino::NeutrinoPFParticleTagger::reconfigure(fhicl::ParameterSet const & p)
