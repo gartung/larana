@@ -51,6 +51,7 @@ standard_neutrinopfparticletagger:
     PFParticleModuleLabel: "pandoraCosmic"
     TrackModuleLabel:      "pandoraCosmic"
     FlashModuleLabel:      "simpleFlashCosmic"
+    CalorimetryModuleLabel: "pandoraCosmiccalo"
     fitter: {
     pIdHypothesis: 13
     minNumSegments: 3

@@ -22,6 +22,7 @@
 #include "lardataobj/RecoBase/Cluster.h"
 #include "lardataobj/RecoBase/OpFlash.h"
 #include "larsim/MCCheater/BackTracker.h"
+#include "lardataobj/AnalysisBase/Calorimetry.h"
 
 #include "lardataobj/AnalysisBase/CosmicTag.h"
 #include "larreco/RecoAlg/SpacePointAlg.h"
@@ -60,6 +61,7 @@ private:
     std::string fTrackModuleLabel;
     std::string fFlashModuleLabel;
     trkf::TrajectoryMCSFitter mcsfitter;
+    std::string fCalorimetryModuleLabel;
     
     TTree* fEventTree;
     Int_t run;
@@ -82,6 +84,10 @@ private:
     Float_t cathode_pierce_val[max_pfparticles];
     Float_t flash_z_diff[max_pfparticles];
     Float_t delta_ll[max_pfparticles];
+    Float_t av_dedx_1[max_pfparticles];
+    Float_t av_dedx_2[max_pfparticles];
+    Float_t low_end[max_pfparticles];
+    Float_t high_end[max_pfparticles];
 };
 
 neutrino::NeutrinoPFParticleTagger::NeutrinoPFParticleTagger(fhicl::ParameterSet const & p)
@@ -115,6 +121,10 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
     evt.getByLabel( fPFParticleModuleLabel, pfParticleHandle);
     
     art::FindManyP<recob::Cluster> fmcp(pfParticleHandle, evt, fPFParticleModuleLabel);
+    
+    art::Handle< std::vector<recob::Track> > trackListHandle;
+    evt.getByLabel(fTrackModuleLabel,trackListHandle);
+    art::FindManyP<anab::Calorimetry> fmcal(trackListHandle, evt, fCalorimetryModuleLabel);
     
     art::ServiceHandle<cheat::BackTracker> bt;
     
@@ -181,12 +191,12 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
       std::map<int,double> trkide;
       for(size_t h = 0; h < allHits.size(); ++h){
           art::Ptr<recob::Hit> hit = allHits[h];
-          std::vector<sim::IDE> ides;
+          //std::vector<sim::IDE> ides;
           std::vector<sim::TrackIDE> TrackIDs = bt->HitToEveID(hit);
     
-    for(size_t e = 0; e < TrackIDs.size(); ++e){
-      trkide[TrackIDs[e].trackID] += TrackIDs[e].energy;
-    }
+          for(size_t e = 0; e < TrackIDs.size(); ++e){
+             trkide[TrackIDs[e].trackID] += TrackIDs[e].energy;
+          }
       }
       // Work out which IDE despoited the most charge in the hit if there was more than one.
       double maxe = -1;
@@ -237,10 +247,10 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 	float trk_end_y=0;
 	float trk_start_z=0;
 	float trk_end_z=0;
-	int trkid=0;
+	int trkid=-1;
 	float mindis0 = FLT_MAX;
         float mindis1 = FLT_MAX;
-	int track_vec_index=-1; 
+	//int track_vec_index=-1; 
 	float del_ll=0;
 	
 	std::cout << "************ PF particle ID : " << int(pfPartIdx) << std::endl; 
@@ -253,7 +263,7 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 	    
 	    if(track->Length() > long_length){ 
 	       long_length=track->Length();
-	       track_vec_index=itrk;
+	       //track_vec_index=itrk;
 	       trk_start_x=pos.X();
 	       trk_end_x=end.X();
 	       trk_start_y=pos.Y();
@@ -265,11 +275,12 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 	       if(trk_start_y > trk_end_y) del_ll=result.fwdLogLikelihood()-result.bwdLogLikelihood();
 	       else del_ll=result.bwdLogLikelihood()-result.fwdLogLikelihood();
 	    }
+	    
 	}
 	
 	if(pfPartIdx < max_pfparticles){
 	
-	   if(track_vec_index!=-1){
+	   if(trkid!=-1){
 	      start_x[pfPartIdx] = trk_start_x;
 	      end_x[pfPartIdx] = trk_end_x;
 	      start_y[pfPartIdx] = trk_start_y;
@@ -347,6 +358,107 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 	      }
 	      
 	      flash_index.clear();
+	    
+	      
+	      /////////////////////// Calorimetry information for tracks ////////////////
+	      
+	      std::cout <<  "*************** Using calorimetry information first time ******************" << std::endl;
+	      
+	      std::vector<art::Ptr<anab::Calorimetry>> calos = fmcal.at(trkid);
+	      //std::cout << "$$$$$$$$$$$$$$ Track vector ID : " << unsigned(track_vec_index) << "   " << track_vec_index << "   $$$$$$$$$$$$$$$$" << std::endl;
+	      int k_plane_0_hits=-1;int k_plane_1_hits=-1;int k_plane_2_hits=-1;
+	      for (size_t ical = 0; ical<calos.size(); ++ical){
+	           if (!calos[ical]) continue;
+	           if (!calos[ical]->PlaneID().isValid) continue;
+	           int planenum = calos[ical]->PlaneID().Plane;
+		   if (planenum<0||planenum>2) continue;
+		   if (planenum == 0) k_plane_0_hits = int(calos[ical] -> dEdx().size());
+	           else if (planenum == 1) k_plane_1_hits = int(calos[ical] -> dEdx().size());
+		   else if (planenum == 2) k_plane_2_hits = int(calos[ical] -> dEdx().size());
+	      }
+	      
+	      int k_best_planenum = -1;
+	      if (k_plane_0_hits != -1 || k_plane_1_hits != -1 || k_plane_2_hits != -1){
+	          if(k_plane_0_hits > k_plane_1_hits && k_plane_0_hits > k_plane_2_hits) k_best_planenum = 0;
+                  else if(k_plane_1_hits > k_plane_0_hits && k_plane_1_hits > k_plane_2_hits) k_best_planenum = 1;
+                  else if(k_plane_2_hits > k_plane_0_hits && k_plane_2_hits > k_plane_1_hits) k_best_planenum = 2;
+                  else if(k_plane_2_hits==k_plane_0_hits && k_plane_2_hits > k_plane_1_hits) k_best_planenum = 2;
+                  else if(k_plane_2_hits==k_plane_1_hits && k_plane_2_hits > k_plane_0_hits) k_best_planenum = 2;
+                  else if(k_plane_1_hits==k_plane_0_hits && k_plane_1_hits > k_plane_2_hits) k_best_planenum = 0;
+                  else if(k_plane_1_hits==k_plane_0_hits && k_plane_1_hits==k_plane_2_hits) k_best_planenum = 2;
+	      }
+	      
+	      float tot_dedx_0=0;
+	      float tot_dedx_1=0;
+	      int n0=0;
+	      int n1=0;
+	      float y_hit_1=0;
+	      float y_hit_last=0;
+	      float res_1=0;
+	      float res_last=0;
+	      
+	      for (size_t ical = 0; ical<calos.size(); ++ical){
+	           if (!calos[ical]) continue;
+	           if (!calos[ical]->PlaneID().isValid) continue;
+	           int planenum = calos[ical]->PlaneID().Plane;
+		   if (planenum<0||planenum>2) continue;
+		   if (planenum == k_best_planenum){
+		       const size_t NHits = calos[ical] -> dEdx().size();
+		       for(size_t iHit = 0; iHit < NHits; ++iHit){
+		           const auto& TrkPos = (calos[ical] -> XYZ())[iHit];
+			   if(iHit==0){ 
+			       y_hit_1 = TrkPos.Y();
+			       res_1 = (calos[ical]->ResidualRange())[iHit];
+			   }
+			   if(iHit==NHits-1){
+			       y_hit_last = TrkPos.Y();
+			       res_last = (calos[ical]->ResidualRange())[iHit];
+			   } 
+			   if((calos[ical]->ResidualRange())[iHit] < 3){
+			       tot_dedx_0 += (calos[ical]->dEdx())[iHit];
+			       n0++;
+			   }
+			   
+			   if(calos[ical]->Range()-(calos[ical]->ResidualRange())[iHit] < 3){
+			      tot_dedx_1 += (calos[ical]->dEdx())[iHit];
+			      n1++;
+			   }
+		       }
+		   }
+	      }
+	      
+	      if(n0!=0) av_dedx_1[pfPartIdx] = float(tot_dedx_0)/n0;
+	      if(n1!=0) av_dedx_2[pfPartIdx] = float(tot_dedx_1)/n1;
+	      
+	    //////////////////////// End of calorimetry information for tracks ////////
+	    
+	     if(n0!=0 && n1!=0){
+	        if(y_hit_1 < y_hit_last){
+		   if(res_1 < res_last){
+		      low_end[pfPartIdx] = float(tot_dedx_0)/n0;
+		      high_end[pfPartIdx] = float(tot_dedx_1)/n1;
+		   }
+		   
+		   if(res_1 > res_last){
+		     low_end[pfPartIdx] = float(tot_dedx_1)/n1;
+		     high_end[pfPartIdx] = float(tot_dedx_0)/n0;
+		   }
+		}
+		if(y_hit_1 > y_hit_last){
+		   if(res_1 < res_last){
+		      low_end[pfPartIdx] = float(tot_dedx_1)/n1;
+		      high_end[pfPartIdx] = float(tot_dedx_0)/n0;
+		   }
+		   
+		   if(res_1 > res_last){
+		      low_end[pfPartIdx] = float(tot_dedx_0)/n0;
+		      high_end[pfPartIdx] = float(tot_dedx_1)/n1;
+		   }
+		}
+	     }
+	    
+	    
+	    
 	    }
 	}
 	
@@ -386,6 +498,10 @@ void neutrino::NeutrinoPFParticleTagger::reset(){
 	  cathode_pierce_val[i] = -9999;
 	  flash_z_diff[i] = -9999;
 	  delta_ll[i] = -9999;
+	  av_dedx_1[i] = -9999;
+	  av_dedx_2[i] = -9999;
+	  low_end[i] = -9999;
+	  high_end[i] = -9999;
      }
 }
 
@@ -414,6 +530,10 @@ void neutrino::NeutrinoPFParticleTagger::beginJob()
  fEventTree->Branch("cathode_pierce_val",cathode_pierce_val,"cathode_pierce_val[npfparticles]/F");
  fEventTree->Branch("flash_z_diff",flash_z_diff,"flash_z_diff[npfparticles]/F");
  fEventTree->Branch("delta_ll",delta_ll,"delta_ll[npfparticles]/F");
+ fEventTree->Branch("av_dedx_1",av_dedx_1,"av_dedx_1[npfparticles]/F");
+ fEventTree->Branch("av_dedx_2",av_dedx_2,"av_dedx_2[npfparticles]/F");
+ fEventTree->Branch("low_end",low_end,"low_end[npfparticles]/F");
+ fEventTree->Branch("high_end",high_end,"high_end[npfparticles]/F");
 }
 
 void neutrino::NeutrinoPFParticleTagger::reconfigure(fhicl::ParameterSet const & p)
@@ -421,6 +541,7 @@ void neutrino::NeutrinoPFParticleTagger::reconfigure(fhicl::ParameterSet const &
     fPFParticleModuleLabel = p.get< std::string >("PFParticleModuleLabel");
     fTrackModuleLabel      = p.get< std::string >("TrackModuleLabel", "track");
     fFlashModuleLabel      = p.get< std::string >("FlashModuleLabel");
+    fCalorimetryModuleLabel = p.get< std::string >("CalorimetryModuleLabel");
 }
 
 void neutrino::NeutrinoPFParticleTagger::endJob() {
