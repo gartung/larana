@@ -37,7 +37,6 @@
 #include "lardataobj/AnalysisBase/ParticleID.h"
 #include "nusimdata/SimulationBase/MCParticle.h"
 #include "larcore/Geometry/Geometry.h"
-#include "lardataobj/AnalysisBase/ParticleID.h"
 #include "larana/TruthMatching/TrajectoryInterpExtrapAlg.h"
 #include "larana/TruthMatching/BackTrackMatcherAlg.h"
 #include "larana/TruthMatching/StartPosDirMatcherAlg.h"
@@ -164,6 +163,14 @@ namespace pid {
     float fTree_matchEndDistance;
     float fTree_matchEndAngle;
     Int_t fTree_producesNTracks;
+
+    // To compare with another algorithm
+    std::vector<UInt_t> fTree_pidPlane;
+	std::vector<float> fTree_pidChi2_p;
+	std::vector<float> fTree_pidChi2_pi;
+	std::vector<float> fTree_pidChi2_mu;
+	std::vector<float> fTree_pidChi2_k;
+	std::vector<float> fTree_PIDA;
 
     // Each entry in the vector is a trajectory point
     std::vector<float> fTree_true_resRange;
@@ -383,6 +390,13 @@ namespace pid {
       fTree->Branch("matchEndAngle",&fTree_matchEndAngle,"matchEndAngle/F");
       fTree->Branch("producesNTracks",&fTree_producesNTracks,"producesNTracks/I");
 
+      fTree->Branch("pidPlane",&fTree_pidPlane);
+	  fTree->Branch("pidChi2_p",&fTree_pidChi2_p);
+	  fTree->Branch("pidChi2_pi",&fTree_pidChi2_pi);
+	  fTree->Branch("pidChi2_mu",&fTree_pidChi2_mu);
+	  fTree->Branch("pidChi2_k",&fTree_pidChi2_k);
+	  fTree->Branch("PIDA",&fTree_PIDA);
+
       if (fWriteTrueTree)
       {
         fTree->Branch("true_resRange",&fTree_true_resRange);
@@ -534,6 +548,13 @@ namespace pid {
           fTree_interpIClosestTrajPoint.clear();
           fTree_nCaloHits = 0;
           fTree_producesNTracks = producesNTracks(recoMatch,e);
+
+          fTree_pidPlane.clear();
+	      fTree_pidChi2_p.clear();
+	      fTree_pidChi2_pi.clear();
+	      fTree_pidChi2_mu.clear();
+	      fTree_pidChi2_k.clear();
+	      fTree_PIDA.clear();
         }
 
         art::FindManyP<anab::Calorimetry> fmCalo({recoMatch}, e, fCaloTag); //I think I remember reading that constructing FindManyP objects in a loop
@@ -670,6 +691,25 @@ namespace pid {
           }
           lastPointDir = thisPointDir;
         } // for iTrkPoints
+
+        // Write Chi2 PID to tree
+        if(fWriteTree)
+        {
+          art::FindManyP<anab::ParticleID>  fmpidchi2({recoMatch}, e, fPIDTag);
+          if (fmpidchi2.isValid() && fmpidchi2.size() > 0)
+	      {
+            const std::vector<art::Ptr<anab::ParticleID> > pidchi2s = fmpidchi2.at(0); //at(0) since only one track was used to make this findManyP object
+            for(const auto & pidchi2 : pidchi2s)
+            {
+                fTree_pidPlane.push_back(pidchi2->PlaneID().Plane);
+	            fTree_pidChi2_p.push_back(pidchi2->Chi2Proton());
+	            fTree_pidChi2_pi.push_back(pidchi2->Chi2Pion());
+	            fTree_pidChi2_mu.push_back(pidchi2->Chi2Muon());
+	            fTree_pidChi2_k.push_back(pidchi2->Chi2Kaon());
+	            fTree_PIDA.push_back(pidchi2->PIDA());
+            }
+          }
+        } // if fWriteTree writing Chi2 PID to tree
 
         fTree->Fill();
       } //if a matching reco track was found for this true particle
