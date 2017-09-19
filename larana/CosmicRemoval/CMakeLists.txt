@@ -62,6 +62,7 @@ art_make(
 			    ${CLHEP}
 			    ${ROOT_BASIC_LIB_LIST}
 			    ${G4_LIB_LIST}
+			    ${ROOT_GEOM}
          )
 
 install_headers()
