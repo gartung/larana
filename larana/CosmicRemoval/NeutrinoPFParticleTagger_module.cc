@@ -99,9 +99,9 @@ neutrino::NeutrinoPFParticleTagger::NeutrinoPFParticleTagger(fhicl::ParameterSet
     this->reconfigure(p);
 
     // Call appropriate Produces<>() functions here.
-    //produces< std::vector<anab::CosmicTag>>();
-    //produces< art::Assns<anab::CosmicTag,   recob::Track>>();
-    //produces< art::Assns<recob::PFParticle, anab::CosmicTag>>();
+    produces< std::vector<anab::CosmicTag>>();
+    produces< art::Assns<anab::CosmicTag,   recob::Track>>();
+    produces< art::Assns<recob::PFParticle, anab::CosmicTag>>();
 }
 
 neutrino::NeutrinoPFParticleTagger::~NeutrinoPFParticleTagger()
@@ -112,9 +112,9 @@ neutrino::NeutrinoPFParticleTagger::~NeutrinoPFParticleTagger()
 void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 {
     // Instatiate the output
-    //std::unique_ptr< std::vector< anab::CosmicTag > >                  cosmicTagTrackVector(       new std::vector<anab::CosmicTag>                  );
-    //std::unique_ptr< art::Assns<anab::CosmicTag,   recob::Track > >    assnOutCosmicTagTrack(      new art::Assns<anab::CosmicTag,   recob::Track   >);
-    //std::unique_ptr< art::Assns<recob::PFParticle, anab::CosmicTag > > assnOutCosmicTagPFParticle( new art::Assns<recob::PFParticle, anab::CosmicTag>);
+    std::unique_ptr< std::vector< anab::CosmicTag > >                  cosmicTagTrackVector(       new std::vector<anab::CosmicTag>                  );
+    std::unique_ptr< art::Assns<anab::CosmicTag,   recob::Track > >    assnOutCosmicTagTrack(      new art::Assns<anab::CosmicTag,   recob::Track   >);
+    std::unique_ptr< art::Assns<recob::PFParticle, anab::CosmicTag > > assnOutCosmicTagPFParticle( new art::Assns<recob::PFParticle, anab::CosmicTag>);
     
     // Recover handle for PFParticles
     //reset();
@@ -172,12 +172,12 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
     subrun = evt.subRun();
     event = evt.id().event(); 
     
-    if (!pfParticleHandle.isValid())
-    {
-        //evt.put( std::move(cosmicTagTrackVector) );
-        //evt.put( std::move(assnOutCosmicTagTrack) );
-        return;
-    }
+//    if (!pfParticleHandle.isValid())
+//    {
+//        evt.put( std::move(cosmicTagTrackVector) );
+//        evt.put( std::move(assnOutCosmicTagTrack) );
+//        return;
+//    }
     
     // Recover the handle for the tracks
     //art::Handle<std::vector<recob::Track> > trackHandle;
@@ -306,7 +306,7 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 	}
 	
 	//if(pfPartIdx < max_pfparticles){
-	
+	anab::CosmicTagID_t    tag_id   = anab::CosmicTagID_t::kNotTagged;
 	   if(trkid!=-1){
 	      start_x = trk_start_x;
 	      end_x = trk_end_x;
@@ -505,8 +505,33 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 	     }
 	    
 	    fEventTree->Fill();
-	    
+            std::vector<float> endPt1;
+            std::vector<float> endPt2;
+            endPt1.push_back( trk_start_x );
+            endPt1.push_back( trk_start_y );
+            endPt1.push_back( trk_start_z );
+            endPt2.push_back( trk_end_x );
+            endPt2.push_back( trk_end_y );
+            endPt2.push_back( trk_end_z );
+
+            cosmicTagTrackVector->emplace_back( endPt1, endPt2, cosmic_score, tag_id);
+
+            util::CreateAssn(*this, evt, *cosmicTagTrackVector, trackVec,  *assnOutCosmicTagTrack );
+
+            util::CreateAssn(*this, evt, *cosmicTagTrackVector, pfParticle, *assnOutCosmicTagPFParticle);
+
 	    }//if (trkid!=-1)
+           else{
+             std::vector<float> tempPt1, tempPt2;
+             tempPt1.push_back(-999);
+             tempPt1.push_back(-999);
+             tempPt1.push_back(-999);
+             tempPt2.push_back(-999);
+             tempPt2.push_back(-999);
+             tempPt2.push_back(-999);
+             cosmicTagTrackVector->emplace_back( tempPt1, tempPt2, 0., anab::CosmicTagID_t::kNotTagged);
+             util::CreateAssn(*this, evt, *cosmicTagTrackVector, pfParticle, *assnOutCosmicTagPFParticle);
+           }
 	//}//if (pfPartIdx < max_pfparticles)
 	
 	//std::cout<< "Track vector size : " << trackVec.size() << std::endl;
@@ -518,6 +543,11 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
     
     //npfparticles = int(pfParticleHandle->size());
     //fEventTree->Fill();
+
+    evt.put( std::move(cosmicTagTrackVector)      );
+    evt.put( std::move(assnOutCosmicTagTrack)     );
+    evt.put( std::move(assnOutCosmicTagPFParticle));
+
     return;
 
 } // end of produce
