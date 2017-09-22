@@ -52,6 +52,7 @@ standard_neutrinopfparticletagger:
     TrackModuleLabel:      "pandoraCosmic"
     FlashModuleLabel:      "simpleFlashCosmic"
     CalorimetryModuleLabel: "pandoraCosmiccalo"
+    SaveTTree:              false
     fitter: {
     pIdHypothesis: 13
     minNumSegments: 3
@@ -151,6 +152,14 @@ standard_trackpfparticlematch:
   TrackModuleLabel:         "trackkalmanhit"
 }
 
+standard_cosmictaggerefficiency:
+{
+  module_type:             "CosmicTaggerEfficiency"
+  CosmicProducerLabels:    ["pandoraCosmicPFPart","pandoraCosmicFlashTag"]
+  TrackProducerLabel:      "pandoraCosmic"
+  CosmicTagThresholds:     [0.6, 0.9]
+}
+
 microboone_cosmictagger:               @local::standard_cosmictagger
 microboone_cosmictracktagger:          @local::standard_cosmictracktagger
 microboone_cosmicpfparticletagger:     @local::standard_cosmicpfparticletagger
@@ -175,6 +184,5 @@ TrackModuleLabel:         "beziertracker"
 CosmicTagAssocLabel:      ["cosmictagger" ]
 CosmicScoreThresholds:   [0.0]
 }
-
 
 END_PROLOG
