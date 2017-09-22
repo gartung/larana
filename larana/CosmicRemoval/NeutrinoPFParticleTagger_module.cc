@@ -239,11 +239,9 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 	
      const simb::MCParticle* particle=bt->TrackIDToParticle(Trackid);	    
      if(particle){
-       if(pfPartIdx < max_pfparticles){ 
-           pdg = particle->PdgCode();
-	   origin = bt->TrackIDToMCTruth(Trackid)->Origin();
-	   true_time = particle->T();
-       }
+       pdg = particle->PdgCode();
+       origin = bt->TrackIDToMCTruth(Trackid)->Origin();
+       true_time = particle->T();
      }	
 	
 	art::Ptr<recob::PFParticle> pfParticle(pfParticleHandle, pfPartIdx);
