@@ -62,6 +62,7 @@ private:
     std::string fFlashModuleLabel;
     trkf::TrajectoryMCSFitter mcsfitter;
     std::string fCalorimetryModuleLabel;
+    bool        fSaveTTree;
     
     TTree* fEventTree;
     Int_t run;
@@ -205,6 +206,7 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
     {
         
 	reset();
+     if (fSaveTTree){
 	std::vector< art::Ptr<recob::Hit> > allHits;
       //Get all hits through associated clusters
       std::vector< art::Ptr<recob::Cluster>> allClusters = fmcp.at(pfPartIdx);
@@ -243,7 +245,7 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
        origin = bt->TrackIDToMCTruth(Trackid)->Origin();
        true_time = particle->T();
      }	
-	
+     }	
 	art::Ptr<recob::PFParticle> pfParticle(pfParticleHandle, pfPartIdx);
         
         // Recover the track vector
@@ -502,7 +504,7 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 		}
 	     }
 	    
-	    fEventTree->Fill();
+            if (fSaveTTree) fEventTree->Fill();
             std::vector<float> endPt1;
             std::vector<float> endPt2;
             endPt1.push_back( trk_start_x );
@@ -621,6 +623,7 @@ void neutrino::NeutrinoPFParticleTagger::reconfigure(fhicl::ParameterSet const &
     fTrackModuleLabel      = p.get< std::string >("TrackModuleLabel", "track");
     fFlashModuleLabel      = p.get< std::string >("FlashModuleLabel");
     fCalorimetryModuleLabel = p.get< std::string >("CalorimetryModuleLabel");
+    fSaveTTree             = p.get<bool>("SaveTTree", false);
 }
 
 void neutrino::NeutrinoPFParticleTagger::endJob() {
