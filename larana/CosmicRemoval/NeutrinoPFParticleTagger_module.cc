@@ -280,7 +280,7 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 	//int track_vec_index=-1; 
 	float del_ll=0;
 	
-	std::cout << "************ PF particle ID : " << int(pfPartIdx) << std::endl; 
+	//std::cout << "************ PF particle ID : " << int(pfPartIdx) << std::endl; 
 	
 	for (size_t itrk = 0; itrk<trackVec.size(); ++itrk){
 	    art::Ptr<recob::Track> track = trackVec[itrk];
@@ -403,7 +403,7 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 	      
 	      /////////////////////// Calorimetry information for tracks ////////////////
 	      
-	      std::cout <<  "*************** Using calorimetry information first time ******************" << std::endl;
+	      //std::cout <<  "*************** Using calorimetry information first time ******************" << std::endl;
 	      
 	      std::vector<art::Ptr<anab::Calorimetry>> calos = fmcal.at(trkid);
 	      //std::cout << "$$$$$$$$$$$$$$ Track vector ID : " << unsigned(track_vec_index) << "   " << track_vec_index << "   $$$$$$$$$$$$$$$$" << std::endl;
