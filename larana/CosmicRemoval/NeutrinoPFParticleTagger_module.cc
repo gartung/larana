@@ -91,6 +91,8 @@ private:
   Float_t high_end;
   Float_t cosmic_score;
   Float_t true_time;
+  Int_t st_edge;
+  Int_t en_edge;
 };
 
 neutrino::NeutrinoPFParticleTagger::NeutrinoPFParticleTagger(fhicl::ParameterSet const & p)
@@ -325,23 +327,49 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
         if(trk_end_x < 0 || trk_end_x >260) cosmic_score=1;
 	      
 	      
-        if (std::abs(trk_start_y - miny)<mindis0) mindis0 = std::abs(trk_start_y- miny);
-        if (std::abs(trk_start_y - maxy)<mindis0) mindis0 = std::abs(trk_start_y - maxy);
-        if (std::abs(trk_start_z - minz)<mindis0) mindis0 = std::abs(trk_start_z - minz);
-        if (std::abs(trk_start_z - maxz)<mindis0) mindis0 = std::abs(trk_start_z - maxz);
-        if (std::abs(trk_end_y - miny)<mindis1) mindis1 = std::abs(trk_end_y - miny);
-        if (std::abs(trk_end_y - maxy)<mindis1) mindis1 = std::abs(trk_end_y - maxy);
-        if (std::abs(trk_end_z - minz)<mindis1) mindis1 = std::abs(trk_end_z - minz);
-        if (std::abs(trk_end_z - maxz)<mindis1) mindis1 = std::abs(trk_end_z - maxz);
+        if (std::abs(trk_start_y - miny)<mindis0){ 
+	    mindis0 = std::abs(trk_start_y- miny);
+	    st_edge = 3;
+	}
+        if (std::abs(trk_start_y - maxy)<mindis0){ 
+	    mindis0 = std::abs(trk_start_y - maxy);
+	    st_edge = 1;
+	}
+        if (std::abs(trk_start_z - minz)<mindis0){ 
+	    mindis0 = std::abs(trk_start_z - minz);
+	    st_edge = 0;
+	}
+        if (std::abs(trk_start_z - maxz)<mindis0){ 
+	    mindis0 = std::abs(trk_start_z - maxz);
+	    st_edge = 2;
+	}
+        if (std::abs(trk_end_y - miny)<mindis1){ 
+	    mindis1 = std::abs(trk_end_y - miny);
+	    en_edge = 3;
+	}
+        if (std::abs(trk_end_y - maxy)<mindis1){ 
+	    mindis1 = std::abs(trk_end_y - maxy);
+	    en_edge = 1;
+	}
+        if (std::abs(trk_end_z - minz)<mindis1){ 
+	    mindis1 = std::abs(trk_end_z - minz);
+	    en_edge = 0;
+	}
+        if (std::abs(trk_end_z - maxz)<mindis1){ 
+	    mindis1 = std::abs(trk_end_z - maxz);
+	    en_edge = 2;
+	}
 	      
         mindis_0 = mindis0;
         mindis_1 = mindis1;
+	
+	
         // std::cout << "****************** tpc.min Y : " << tpc.MinY() << "  *********** tpc.max Y : " << tpc.MaxY() << std::endl;
         // std::cout << "****************** tpc min z : " << tpc.MinZ() << " ************ tpc max z : " << tpc.MaxZ() << std::endl;
 	      
-        if((trk_start_y>trk_end_y?mindis0:mindis1)<30 && del_ll < -5) cosmic_score=1;
+        if((trk_start_y>trk_end_y?mindis0:mindis1)<20 && del_ll < -5) cosmic_score=1;
 	      
-        if(mindis0 < 30 && mindis1 < 30) cosmic_score=1;
+        if(mindis0 < 20 && mindis1 < 20 && st_edge!=en_edge) cosmic_score=1;
 	      
         float minz,minx,max_x;
         if(trk_start_x > trk_end_x){ 
@@ -389,7 +417,7 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
           cathode_pierce_val = min_cathode_pierce;
           flash_z_diff = min_z_diff;
           if(/*(trk_start_y<trk_end_y?mindis0:mindis1)<30 && */min_x_diff<1) cosmic_score = 1;
-          if(/*(trk_start_y<trk_end_y?mindis0:mindis1)<30*/(mindis0 < 30 || mindis1 < 30) && min_cathode_pierce<1) cosmic_score = 1;
+          if(/*(trk_start_y<trk_end_y?mindis0:mindis1)<30*/(mindis0 < 20 || mindis1 < 20) && min_cathode_pierce<1) cosmic_score = 1;
         }
 	      
         else{ 
@@ -497,7 +525,7 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
             }
           }
 		
-          if((start_y>end_y?mindis_0:mindis_1)<30 && (start_y<end_y?mindis_0:mindis_1)>30){
+          if((start_y>end_y?mindis_0:mindis_1)<20 && (start_y<end_y?mindis_0:mindis_1)>20){
             if(low_end >3 && high_end <3){
               cosmic_score=1;
             }
@@ -581,6 +609,8 @@ void neutrino::NeutrinoPFParticleTagger::reset(){
   high_end = -9999;
   cosmic_score = 0;
   true_time = -9999;
+  st_edge = -9999;
+  en_edge = -9999;
   //}
 }
 
@@ -615,6 +645,8 @@ void neutrino::NeutrinoPFParticleTagger::beginJob()
   fEventTree->Branch("high_end",&high_end,"high_end/F");
   fEventTree->Branch("cosmic_score",&cosmic_score,"cosmic_score/F");
   fEventTree->Branch("true_time",&true_time,"true_time/F");
+  fEventTree->Branch("st_edge",&st_edge,"st_edge/I");
+  fEventTree->Branch("en_edge",&en_edge,"en_edge/I");
 }
 
 void neutrino::NeutrinoPFParticleTagger::reconfigure(fhicl::ParameterSet const & p)
