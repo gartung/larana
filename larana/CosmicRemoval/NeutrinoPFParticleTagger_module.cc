@@ -93,6 +93,8 @@ private:
   Float_t true_time;
   Int_t st_edge;
   Int_t en_edge;
+  Float_t low_median;
+  Float_t high_median;
 };
 
 neutrino::NeutrinoPFParticleTagger::NeutrinoPFParticleTagger(fhicl::ParameterSet const & p)
@@ -367,7 +369,7 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
         // std::cout << "****************** tpc.min Y : " << tpc.MinY() << "  *********** tpc.max Y : " << tpc.MaxY() << std::endl;
         // std::cout << "****************** tpc min z : " << tpc.MinZ() << " ************ tpc max z : " << tpc.MaxZ() << std::endl;
 	      
-        if((trk_start_y>trk_end_y?mindis0:mindis1)<20 && del_ll < -5) cosmic_score=1;
+        if((trk_start_y>trk_end_y?mindis0:mindis1)<20 && del_ll < -1) cosmic_score=1;
 	      
         if(mindis0 < 20 && mindis1 < 20 && st_edge!=en_edge) cosmic_score=1;
 	      
@@ -465,6 +467,8 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
         float y_hit_last=0;
         float res_1=0;
         float res_last=0;
+	std::vector<float> vec_dedx_0;
+	std::vector<float> vec_dedx_1;
 	      
         for (size_t ical = 0; ical<calos.size(); ++ical){
           if (!calos[ical]) continue;
@@ -485,11 +489,13 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
               } 
               if((calos[ical]->ResidualRange())[iHit] < 3){
                 tot_dedx_0 += (calos[ical]->dEdx())[iHit];
+		vec_dedx_0.push_back((calos[ical]->dEdx())[iHit]);
                 n0++;
               }
 			   
               if(calos[ical]->Range()-(calos[ical]->ResidualRange())[iHit] < 3){
                 tot_dedx_1 += (calos[ical]->dEdx())[iHit];
+		vec_dedx_1.push_back((calos[ical]->dEdx())[iHit]);
                 n1++;
               }
             }
@@ -498,8 +504,29 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 	      
         if(n0!=0) av_dedx_1 = float(tot_dedx_0)/n0;
         if(n1!=0) av_dedx_2 = float(tot_dedx_1)/n1;
-	      
-        //////////////////////// End of calorimetry information for tracks ////////
+	float av_dedx_med_0=0;
+	float av_dedx_med_1=0;
+	std::sort(vec_dedx_0.begin(),vec_dedx_0.end());
+	std::sort(vec_dedx_1.begin(),vec_dedx_1.end());
+	if(vec_dedx_0.size()){
+	   if(vec_dedx_0.size()%2==1){
+	      av_dedx_med_0=vec_dedx_0[(vec_dedx_0.size()-1)/2];
+	   }
+	   if(vec_dedx_0.size()%2==0){
+	     av_dedx_med_0=float(vec_dedx_0[vec_dedx_0.size()/2] + vec_dedx_0[(vec_dedx_0.size()/2)-1])/2;
+	   }
+	}
+	
+	if(vec_dedx_1.size()){
+	   if(vec_dedx_1.size()%2==1){
+	      av_dedx_med_1=vec_dedx_1[(vec_dedx_1.size()-1)/2];
+	   }
+	   if(vec_dedx_1.size()%2==0){
+	     av_dedx_med_1=float(vec_dedx_1[vec_dedx_1.size()/2] + vec_dedx_1[(vec_dedx_1.size()/2)-1])/2;
+	   }
+	}
+	
+	//////////////////////// End of calorimetry information for tracks ////////
 	    
         if(n0!=0 && n1!=0){
           if(y_hit_1 < y_hit_last){
@@ -525,14 +552,46 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
             }
           }
 		
-          if((start_y>end_y?mindis_0:mindis_1)<20 && (start_y<end_y?mindis_0:mindis_1)>20){
+          /*if((start_y>end_y?mindis_0:mindis_1)<20 && (start_y<end_y?mindis_0:mindis_1)>20){
             if(low_end >3 && high_end <3){
+              cosmic_score=1;
+            }
+          }*/
+        }
+	
+	
+	if(av_dedx_med_0!=0 && av_dedx_med_1!=0){
+          if(y_hit_1 < y_hit_last){
+            if(res_1 < res_last){
+              low_median = av_dedx_med_0;
+              high_median = av_dedx_med_1;
+            }
+		   
+            if(res_1 > res_last){
+              low_median = av_dedx_med_1;
+              high_median = av_dedx_med_0;
+            }
+          }
+          if(y_hit_1 > y_hit_last){
+            if(res_1 < res_last){
+              low_median = av_dedx_med_1;;
+              high_median = av_dedx_med_0;
+            }
+		   
+            if(res_1 > res_last){
+              low_median = av_dedx_med_0;;
+              high_median = av_dedx_med_1;
+            }
+          }
+		
+          if((start_y>end_y?mindis_0:mindis_1)<20 && (start_y<end_y?mindis_0:mindis_1)>20){
+            if(low_median >3 && high_median <3){
               cosmic_score=1;
             }
           }
         }
-	    
-        if (fSaveTTree) fEventTree->Fill();
+	
+	if (fSaveTTree) fEventTree->Fill();
         std::vector<float> endPt1;
         std::vector<float> endPt2;
         endPt1.push_back( trk_start_x );
@@ -611,6 +670,8 @@ void neutrino::NeutrinoPFParticleTagger::reset(){
   true_time = -9999;
   st_edge = -9999;
   en_edge = -9999;
+  low_median = -9999;
+  high_median = -9999;
   //}
 }
 
@@ -647,6 +708,8 @@ void neutrino::NeutrinoPFParticleTagger::beginJob()
   fEventTree->Branch("true_time",&true_time,"true_time/F");
   fEventTree->Branch("st_edge",&st_edge,"st_edge/I");
   fEventTree->Branch("en_edge",&en_edge,"en_edge/I");
+  fEventTree->Branch("low_median",&low_median,"low_median/F");
+  fEventTree->Branch("high_median",&high_median,"high_median/F");
 }
 
 void neutrino::NeutrinoPFParticleTagger::reconfigure(fhicl::ParameterSet const & p)
