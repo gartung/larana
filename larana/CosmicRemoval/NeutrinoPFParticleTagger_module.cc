@@ -369,7 +369,7 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
         // std::cout << "****************** tpc.min Y : " << tpc.MinY() << "  *********** tpc.max Y : " << tpc.MaxY() << std::endl;
         // std::cout << "****************** tpc min z : " << tpc.MinZ() << " ************ tpc max z : " << tpc.MaxZ() << std::endl;
 	      
-        if((trk_start_y>trk_end_y?mindis0:mindis1)<20 && del_ll < -1) cosmic_score=1;
+        if((trk_start_y>trk_end_y?mindis0:mindis1)<20 && del_ll < -1 && (st_edge!=en_edge || std::abs(mindis0-mindis1)>20) ) cosmic_score=1;
 	      
         if(mindis0 < 20 && mindis1 < 20 && st_edge!=en_edge) cosmic_score=1;
 	      
