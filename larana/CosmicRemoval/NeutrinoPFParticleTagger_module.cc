@@ -329,6 +329,8 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
         delta_ll = del_ll;
         float mindis0 = FLT_MAX;
         float mindis1 = FLT_MAX;
+	start_on_edge=0;
+	end_on_edge=0;
 	      
         if (fUseGeom){
           if(trk_start_x < 0 || trk_start_x >260) cosmic_score=1;
@@ -371,15 +373,30 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
         mindis_0 = mindis0;
         mindis_1 = mindis1;
 	
+	if(st_edge==3 || st_edge==1){
+	   if(mindis0 <= 20) start_on_edge=1;
+	}
 	
-        // std::cout << "****************** tpc.min Y : " << tpc.MinY() << "  *********** tpc.max Y : " << tpc.MaxY() << std::endl;
+	if(st_edge==0 || st_edge==2){
+	   if(mindis0 <= 5) start_on_edge=1;
+	}
+	
+	if(en_edge==3 || en_edge==1){
+	   if(mindis1 <= 20) end_on_edge=1;
+	}
+	
+	if(en_edge==0 || en_edge==2){
+	   if(mindis1 <= 5) end_on_edge=1;
+	}
+	
+	// std::cout << "****************** tpc.min Y : " << tpc.MinY() << "  *********** tpc.max Y : " << tpc.MaxY() << std::endl;
         // std::cout << "****************** tpc min z : " << tpc.MinZ() << " ************ tpc max z : " << tpc.MaxZ() << std::endl;
         if (fUseMCS){
-          if((trk_start_y>trk_end_y?mindis0:mindis1)<20 && del_ll < -1 && (st_edge!=en_edge || std::abs(mindis0-mindis1)>20) ) cosmic_score=1;
+          if((trk_start_y>trk_end_y?start_on_edge:end_on_edge)==1 && del_ll < -1 && (st_edge!=en_edge || std::abs(mindis0-mindis1)>20) ) cosmic_score=1;
         }
 
         if (fUseGeom){
-          if(mindis0 < 20 && mindis1 < 20 && st_edge!=en_edge) cosmic_score=1;
+          if(start_on_edge==1 && end_on_edge==1 && st_edge!=en_edge) cosmic_score=1;
         }
 
         float minz,minx,max_x;
@@ -428,8 +445,8 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
           cathode_pierce_val = min_cathode_pierce;
           flash_z_diff = min_z_diff;
           if (fUseFlash){
-            if(/*(trk_start_y<trk_end_y?mindis0:mindis1)<30 && */min_x_diff<1) cosmic_score = 1;
-            if(/*(trk_start_y<trk_end_y?mindis0:mindis1)<30*/(mindis0 < 20 || mindis1 < 20) && min_cathode_pierce<1) cosmic_score = 1;
+            if(/*(trk_start_y<trk_end_y?mindis0:mindis1)<30 && */((start_on_edge==1 && end_on_edge==0) || (start_on_edge==0 && end_on_edge==1)) && min_x_diff<1) cosmic_score = 1;
+            if(/*(trk_start_y<trk_end_y?mindis0:mindis1)<30*/((start_on_edge==1 && end_on_edge==0) || (start_on_edge==0 && end_on_edge==1)) && min_cathode_pierce<1) cosmic_score = 1;
           }
         }
 	      
@@ -595,7 +612,7 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
             }
           }
           if(fUsedEdx){
-            if((start_y>end_y?mindis_0:mindis_1)<20 && (start_y<end_y?mindis_0:mindis_1)>20){
+            if((start_y>end_y?start_on_edge:end_on_edge)==1 && (start_y<end_y?start_on_edge:end_on_edge)==0){
               if(low_median >3 && high_median <3){
                 cosmic_score=1;
               }
