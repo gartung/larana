@@ -95,6 +95,8 @@ private:
   Int_t en_edge;
   Float_t low_median;
   Float_t high_median;
+  Int_t start_on_edge;
+  Int_t end_on_edge;
 };
 
 neutrino::NeutrinoPFParticleTagger::NeutrinoPFParticleTagger(fhicl::ParameterSet const & p)
@@ -672,6 +674,8 @@ void neutrino::NeutrinoPFParticleTagger::reset(){
   en_edge = -9999;
   low_median = -9999;
   high_median = -9999;
+  start_on_edge = -9999;
+  end_on_edge = -9999;
   //}
 }
 
@@ -710,6 +714,8 @@ void neutrino::NeutrinoPFParticleTagger::beginJob()
   fEventTree->Branch("en_edge",&en_edge,"en_edge/I");
   fEventTree->Branch("low_median",&low_median,"low_median/F");
   fEventTree->Branch("high_median",&high_median,"high_median/F");
+  fEventTree->Branch("start_on_edge",&start_on_edge,"start_on_edge/I");
+  fEventTree->Branch("end_on_edge",&end_on_edge,"end_on_edge/I");
 }
 
 void neutrino::NeutrinoPFParticleTagger::reconfigure(fhicl::ParameterSet const & p)
