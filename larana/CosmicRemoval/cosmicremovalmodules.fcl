@@ -53,6 +53,10 @@ standard_neutrinopfparticletagger:
     FlashModuleLabel:      "simpleFlashCosmic"
     CalorimetryModuleLabel: "pandoraCosmiccalo"
     SaveTTree:              false
+    UseGeom:                true
+    UseFlash:               true
+    UseMCS:                 true
+    UsedEdx:                true
     fitter: {
     pIdHypothesis: 13
     minNumSegments: 3
