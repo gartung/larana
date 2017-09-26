@@ -63,7 +63,11 @@ private:
   trkf::TrajectoryMCSFitter mcsfitter;
   std::string fCalorimetryModuleLabel;
   bool        fSaveTTree;
-    
+  bool        fUseGeom;
+  bool        fUseFlash;
+  bool        fUseMCS;
+  bool        fUsedEdx;
+
   TTree* fEventTree;
   Int_t run;
   Int_t subrun;
@@ -326,10 +330,10 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
         float mindis0 = FLT_MAX;
         float mindis1 = FLT_MAX;
 	      
-	      
-        if(trk_start_x < 0 || trk_start_x >260) cosmic_score=1;
-        if(trk_end_x < 0 || trk_end_x >260) cosmic_score=1;
-	      
+        if (fUseGeom){
+          if(trk_start_x < 0 || trk_start_x >260) cosmic_score=1;
+          if(trk_end_x < 0 || trk_end_x >260) cosmic_score=1;
+        }
 	      
         if (std::abs(trk_start_y - miny)<mindis0){ 
 	    mindis0 = std::abs(trk_start_y- miny);
@@ -370,11 +374,14 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
 	
         // std::cout << "****************** tpc.min Y : " << tpc.MinY() << "  *********** tpc.max Y : " << tpc.MaxY() << std::endl;
         // std::cout << "****************** tpc min z : " << tpc.MinZ() << " ************ tpc max z : " << tpc.MaxZ() << std::endl;
-	      
-        if((trk_start_y>trk_end_y?mindis0:mindis1)<20 && del_ll < -1 && (st_edge!=en_edge || std::abs(mindis0-mindis1)>20) ) cosmic_score=1;
-	      
-        if(mindis0 < 20 && mindis1 < 20 && st_edge!=en_edge) cosmic_score=1;
-	      
+        if (fUseMCS){
+          if((trk_start_y>trk_end_y?mindis0:mindis1)<20 && del_ll < -1 && (st_edge!=en_edge || std::abs(mindis0-mindis1)>20) ) cosmic_score=1;
+        }
+
+        if (fUseGeom){
+          if(mindis0 < 20 && mindis1 < 20 && st_edge!=en_edge) cosmic_score=1;
+        }
+
         float minz,minx,max_x;
         if(trk_start_x > trk_end_x){ 
           minz=trk_end_z;
@@ -420,8 +427,10 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
           flash_x_diff= min_x_diff;
           cathode_pierce_val = min_cathode_pierce;
           flash_z_diff = min_z_diff;
-          if(/*(trk_start_y<trk_end_y?mindis0:mindis1)<30 && */min_x_diff<1) cosmic_score = 1;
-          if(/*(trk_start_y<trk_end_y?mindis0:mindis1)<30*/(mindis0 < 20 || mindis1 < 20) && min_cathode_pierce<1) cosmic_score = 1;
+          if (fUseFlash){
+            if(/*(trk_start_y<trk_end_y?mindis0:mindis1)<30 && */min_x_diff<1) cosmic_score = 1;
+            if(/*(trk_start_y<trk_end_y?mindis0:mindis1)<30*/(mindis0 < 20 || mindis1 < 20) && min_cathode_pierce<1) cosmic_score = 1;
+          }
         }
 	      
         else{ 
@@ -585,10 +594,11 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
               high_median = av_dedx_med_1;
             }
           }
-		
-          if((start_y>end_y?mindis_0:mindis_1)<20 && (start_y<end_y?mindis_0:mindis_1)>20){
-            if(low_median >3 && high_median <3){
-              cosmic_score=1;
+          if(fUsedEdx){
+            if((start_y>end_y?mindis_0:mindis_1)<20 && (start_y<end_y?mindis_0:mindis_1)>20){
+              if(low_median >3 && high_median <3){
+                cosmic_score=1;
+              }
             }
           }
         }
@@ -723,8 +733,12 @@ void neutrino::NeutrinoPFParticleTagger::reconfigure(fhicl::ParameterSet const &
   fPFParticleModuleLabel = p.get< std::string >("PFParticleModuleLabel");
   fTrackModuleLabel      = p.get< std::string >("TrackModuleLabel", "track");
   fFlashModuleLabel      = p.get< std::string >("FlashModuleLabel");
-  fCalorimetryModuleLabel = p.get< std::string >("CalorimetryModuleLabel");
+  fCalorimetryModuleLabel= p.get< std::string >("CalorimetryModuleLabel");
   fSaveTTree             = p.get<bool>("SaveTTree", false);
+  fUseGeom               = p.get<bool>("UseGeom");
+  fUseFlash              = p.get<bool>("UseFlash");
+  fUseMCS                = p.get<bool>("UseMCS");
+  fUsedEdx               = p.get<bool>("UsedEdx");
 }
 
 void neutrino::NeutrinoPFParticleTagger::endJob() {
