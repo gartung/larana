@@ -101,6 +101,9 @@ private:
   Float_t high_median;
   Int_t start_on_edge;
   Int_t end_on_edge;
+  Float_t vx;
+  Float_t vy;
+  Float_t vz;
 };
 
 neutrino::NeutrinoPFParticleTagger::NeutrinoPFParticleTagger(fhicl::ParameterSet const & p)
@@ -254,6 +257,11 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
           pdg = particle->PdgCode();
           origin = bt->TrackIDToMCTruth(Trackid)->Origin();
           true_time = particle->T();
+	  if(origin==1){
+	     vx=bt->TrackIDToMCTruth(Trackid)->GetNeutrino().Nu().Vx();
+	     vy=bt->TrackIDToMCTruth(Trackid)->GetNeutrino().Nu().Vy();
+	     vz=bt->TrackIDToMCTruth(Trackid)->GetNeutrino().Nu().Vz();
+	  }
         }	
       }	
       art::Ptr<recob::PFParticle> pfParticle(pfParticleHandle, pfPartIdx);
@@ -445,8 +453,8 @@ void neutrino::NeutrinoPFParticleTagger::produce(art::Event & evt)
           cathode_pierce_val = min_cathode_pierce;
           flash_z_diff = min_z_diff;
           if (fUseFlash){
-            if(/*(trk_start_y<trk_end_y?mindis0:mindis1)<30 && */((start_on_edge==1 && end_on_edge==0) || (start_on_edge==0 && end_on_edge==1)) && min_x_diff<1) cosmic_score = 1;
-            if(/*(trk_start_y<trk_end_y?mindis0:mindis1)<30*/((start_on_edge==1 && end_on_edge==0) || (start_on_edge==0 && end_on_edge==1)) && min_cathode_pierce<1) cosmic_score = 1;
+            if((trk_start_x < trk_end_x?start_on_edge:end_on_edge==0) && (trk_start_x > trk_end_x?start_on_edge:end_on_edge==1) && min_x_diff<1) cosmic_score = 1;
+            if((trk_start_x < trk_end_x?start_on_edge:end_on_edge==1) && (trk_start_x > trk_end_x?start_on_edge:end_on_edge==0) && min_cathode_pierce<1) cosmic_score = 1;
           }
         }
 	      
@@ -703,6 +711,9 @@ void neutrino::NeutrinoPFParticleTagger::reset(){
   high_median = -9999;
   start_on_edge = -9999;
   end_on_edge = -9999;
+  vx = -9999;
+  vy = -9999;
+  vz = -9999;
   //}
 }
 
@@ -743,6 +754,9 @@ void neutrino::NeutrinoPFParticleTagger::beginJob()
   fEventTree->Branch("high_median",&high_median,"high_median/F");
   fEventTree->Branch("start_on_edge",&start_on_edge,"start_on_edge/I");
   fEventTree->Branch("end_on_edge",&end_on_edge,"end_on_edge/I");
+  fEventTree->Branch("vx",&vx,"vx/F");
+  fEventTree->Branch("vy",&vy,"vy/F");
+  fEventTree->Branch("vz",&vz,"vz/F");
 }
 
 void neutrino::NeutrinoPFParticleTagger::reconfigure(fhicl::ParameterSet const & p)
