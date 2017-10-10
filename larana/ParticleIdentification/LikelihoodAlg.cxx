@@ -14,7 +14,12 @@ pid::LikelihoodAlg::LikelihoodAlg(fhicl::ParameterSet const& pset): fPDFFile(nul
   fPDFMaps = std::vector<std::map<int,TH2D*> >(nPlanes);
 
   //Set up the PDF file
-  fPDFFile = TFile::Open(pdfFileName.c_str());
+  std::string pdfFileFullPath;
+  cet::search_path sp("FW_SEARCH_PATH");
+  sp.find_file(pdfFileName,pdfFileFullPath);
+  if(pdfFileFullPath.empty())
+    throw cet::exception("Likelihood File Not Found") <<"Couldn't find '" << pdfFileName << "' in FW_SEARCH_PATH";
+  fPDFFile = TFile::Open(pdfFileFullPath.c_str());
   if(fPDFFile) //maybe throw if this condition is not true
   { 
     //Set up the PDF maps
@@ -48,7 +53,7 @@ pid::LikelihoodAlg::LikelihoodAlg(fhicl::ParameterSet const& pset): fPDFFile(nul
   } //end if PDF file exists
   else // couldn't get file
   {
-    throw cet::exception("LikelihoodAlg:FileError") << "Failed to open file " << pdfFileName << "\n";
+    throw cet::exception("LikelihoodAlg:FileError") << "Failed to open file " << pdfFileFullPath << "\n";
   }
 } //end constructor
 
