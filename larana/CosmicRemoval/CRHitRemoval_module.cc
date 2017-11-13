@@ -159,7 +159,24 @@ void CRHitRemoval::beginJob()
     float samplingRate  = detp->SamplingRate();
     float driftVelocity = detp->DriftVelocity( detp->Efield(), detp->Temperature() ); // cm/us
     
-    fDetectorWidthTicks = 2*geo->DetHalfWidth()/(driftVelocity*samplingRate/1000);
+    /*
+     * This next bit gets the width of the detector. You can't use geo->2*DetHalfWidth() because that returns the width of 
+     * TPC zero, and not the half width of the detector...
+    */
+    size_t nTPCs { geo->TotalNTPC() };
+    std::vector<double> maxXVec, minXVec;
+    //std::vector<int> goodTPCs = {1,2,5,6,9,10};
+    for ( size_t i{0} ; i < nTPCs ; i++ ) {
+    //for (int i : goodTPCs ){
+      auto maxX { geo->TPC(i).MaxX() };
+        maxXVec.push_back( maxX );
+      auto minX { geo->TPC(i).MinX() };
+        minXVec.push_back( minX );
+    }
+    
+    double fDetWidth = *std::max_element( maxXVec.begin(), maxXVec.end() ) - *std::min_element( minXVec.begin(), minXVec.end() );
+    
+    fDetectorWidthTicks = fDetWidth/(driftVelocity*samplingRate/1000);
     fMinTickDrift       = ts->TPCTDC2Tick(0.);
     fMaxTickDrift       = fMinTickDrift + fDetectorWidthTicks + fEndTickPadding;
 }
@@ -179,6 +196,12 @@ void CRHitRemoval::beginJob()
 ///
 void CRHitRemoval::produce(art::Event & evt)
 {
+    /*std::string runNum    = std::to_string( evt.run()    );
+    std::string subRunNum = std::to_string( evt.subRun() );
+    std::string evtNum    = std::to_string( evt.event()  );
+    std::ofstream SpacePointsFile;
+    SpacePointsFile.open( (fPFParticleProducerLabel+"_spacePoints_"+runNum+"_"+subRunNum+"_"+evtNum+".txt").c_str(), std::ios_base::app );
+    */
     ++fNumEvent;
     
     // Start by looking up the original hits
@@ -191,11 +214,12 @@ void CRHitRemoval::produce(art::Event & evt)
     art::FindOneP<recob::Wire>   ChannelHitWires(hitHandle, evt, fHitProducerLabel);
     
     // If there are no hits then there should be no output
-    if (!hitHandle.isValid()) return;
-    
+    if (!hitHandle.isValid()) {
+      return;
+    }
     HitPtrVector ChHits;
     art::fill_ptr_vector(ChHits, hitHandle);
-    
+  
     // this object contains the hit collection
     // and its associations to wires and raw digits:
     recob::HitCollectionCreator hcol(*this,
@@ -204,7 +228,7 @@ void CRHitRemoval::produce(art::Event & evt)
                                      /* doRawDigitAssns */ ChannelHitRawDigits.isValid()
                                      );
     
-    // Now recover thre remaining collections of objects in the event store that we need
+    // Now recover the remaining collections of objects in the event store that we need
     // Recover the PFParticles that are ultimately associated to tracks
     // This will be the key to recovering the hits
     art::Handle<std::vector<recob::PFParticle> > pfParticleHandle;
@@ -246,7 +270,7 @@ void CRHitRemoval::produce(art::Event & evt)
     for(size_t idx = 0; idx != fCosmicProducerLabels.size(); idx++)
     {
         std::string& handleLabel(fCosmicProducerLabels[idx]);
-        
+         
         art::Handle<std::vector<anab::CosmicTag>> cosmicHandle;
         evt.getByLabel(handleLabel, cosmicHandle);
         
@@ -328,7 +352,7 @@ void CRHitRemoval::produce(art::Event & evt)
         for(size_t crIdx = 0; crIdx != cosmicHandle->size(); crIdx++)
         {
             art::Ptr<anab::CosmicTag> cosmicTag(cosmicHandle, crIdx);
-            
+
             // If this was tagged as a CR muon then we have work to do!
             if (cosmicTag->CosmicScore() > thresholdVec[idx])
             {
@@ -359,7 +383,8 @@ void CRHitRemoval::produce(art::Event & evt)
             }
         }
     }
-    
+
+    //art::FindManyP<recob::SpacePoint> HitToSpoints           ( hitHandle,         evt,  fTrackProducerLabels[0]    );
     // If no PFParticles have been tagged then nothing to do
     if (!taggedSet.empty())
     {
@@ -380,19 +405,23 @@ void CRHitRemoval::produce(art::Event & evt)
         for(const auto& pfParticle : *pfParticleHandle)
         {
             // Start with only primaries
-            if (!pfParticle.IsPrimary()) continue;
+            if (!pfParticle.IsPrimary()) {
+              continue;
+            }
             
             // Temporary container for these hits
             HitPtrVector tempHits;
             
             // Find the hits associated to this untagged PFParticle
             collectPFParticleHits(&pfParticle, pfParticleHandle, clusterAssns, clusterHitAssns, tempHits);
-
+            
             // One more possible chance at identifying tagged hits...
             // Check these hits to see if any lie outside time window
             bool goodHits(true);
             
-            if (taggedSet.find(&pfParticle) != taggedSet.end()) goodHits = false;
+            if ( taggedSet.find(&pfParticle) != taggedSet.end() ) {
+              goodHits = false;
+            }
 
             if (goodHits)
             {
@@ -401,7 +430,9 @@ void CRHitRemoval::produce(art::Event & evt)
                 for(const auto& hit : tempHits)
                 {
                     // Check on out of time hits
-                    if (hit->PeakTimeMinusRMS() < fMinTickDrift || hit->PeakTimePlusRMS()  > fMaxTickDrift) nOutOfTime++;
+                    if (hit->PeakTimeMinusRMS() < fMinTickDrift || hit->PeakTimePlusRMS()  > fMaxTickDrift) {
+                      nOutOfTime++;
+                    }
                     
                     if (nOutOfTime > fMaxOutOfTime)
                     {
@@ -411,8 +442,25 @@ void CRHitRemoval::produce(art::Event & evt)
                 }
             }
             
-            if (goodHits) std::copy(tempHits.begin(),tempHits.end(),std::back_inserter(untaggedHits));
-            else          std::copy(tempHits.begin(),tempHits.end(),std::back_inserter(taggedHits));
+            /*for ( size_t h{0} ; h< tempHits.size() ; h++ ) {
+              std::vector< art::Ptr<recob::SpacePoint> > spts = HitToSpoints.at(tempHits[h].key());
+              if (spts.size() > 0 ) {
+                SpacePointsFile << spts[0]->XYZ()[0] << " " << spts[0]->XYZ()[1] << " " << spts[0]->XYZ()[2] << std::endl;
+                if (goodHits) {
+                  SpacePointsFile << "Good" << std::endl << std::endl;
+                }
+                else {
+                  SpacePointsFile << "Bad" << std::endl << std::endl;
+                }
+              }
+            }*/            
+            
+            if (goodHits) {
+              std::copy(tempHits.begin(),tempHits.end(),std::back_inserter(untaggedHits));
+            }
+            else          {
+              std::copy(tempHits.begin(),tempHits.end(),std::back_inserter(taggedHits));
+            }
         }
         
         // First task - remove hits from the tagged hit collection that are inthe untagged hits (shared hits)
@@ -421,7 +469,6 @@ void CRHitRemoval::produce(art::Event & evt)
         // Now filter the tagged hits from the total hit collection
         FilterHits(ChHits, taggedHits);
     }
-    
     // Copy our new hit collection to the output
     copyInTimeHits(ChHits, ChannelHitRawDigits, ChannelHitWires, hcol);
     
@@ -557,3 +604,4 @@ void CRHitRemoval::endJob()
     << "  Number of Cosmic Rays found = " << fNumCRRejects
     << ", " << aveCRPerEvent << " average/event";
 }
+
