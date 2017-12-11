@@ -7,7 +7,7 @@
 */
 
 #include "SimPhotonCounterAlg.h"
-#include "OpDetResponseInterface.h"
+#include "larsim/PhotonPropagation/OpDetResponseInterface.h"
 
 opdet::SimPhotonCounterAlg::SimPhotonCounterAlg(fhicl::ParameterSet const& p)
 {

@@ -18,7 +18,7 @@
 #include "lardataobj/Simulation/sim.h"
 //#include "Geometry/Geometry.h"
 #include "larana/OpticalDetector/OpDigiProperties.h"
-#include "larana/OpticalDetector/OpDetResponseInterface.h"
+#include "larsim/PhotonPropagation/OpDetResponseInterface.h"
 
 
 #include "CLHEP/Random/RandFlat.h"

@@ -12,8 +12,7 @@
 
 // LArSoft includes
 #include "lardataobj/Simulation/SimPhotons.h"
-#include "larana/OpticalDetector/OpDetResponseInterface.h"
-
+#include "larsim/PhotonPropagation/OpDetResponseInterface.h"
 
 
 namespace opdet

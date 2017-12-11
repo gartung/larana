@@ -49,7 +49,7 @@
 
 // LArSoft includes
 #include "larsim/PhotonPropagation/PhotonVisibilityService.h"
-#include "larana/OpticalDetector/OpDetResponseInterface.h"
+#include "larsim/PhotonPropagation/OpDetResponseInterface.h"
 #include "larsim/Simulation/SimListUtils.h"
 #include "lardataobj/Simulation/sim.h"
 #include "larsim/Simulation/LArG4Parameters.h"
