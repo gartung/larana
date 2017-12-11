@@ -104,6 +104,9 @@ namespace opdet {
       bool fMakeAllPhotonsTree;      //
       bool fMakeOpDetsTree;         // Switches to turn on or off each output
       bool fMakeOpDetEventsTree;          //
+
+      bool fStoreReflected;
+      bool fStoreReflT0;
       
       float fQE;                     // Quantum efficiency of tube
       
@@ -168,6 +171,8 @@ namespace opdet {
     fMakeOpDetsTree=           pset.get<bool>("MakeOpDetsTree");
     fMakeOpDetEventsTree=      pset.get<bool>("MakeOpDetEventsTree");
     fMakeLightAnalysisTree=    pset.get<bool>("MakeLightAnalysisTree", false);
+    fStoreReflected=           pset.get<bool>("StoreReflected", false);
+    fStoreReflT0=              pset.get<bool>("StoreReflT0", false);
     //fQE=                       pset.get<double>("QuantumEfficiency");
     //fWavelengthCutLow=         pset.get<double>("WavelengthCutLow");
     //fWavelengthCutHigh=        pset.get<double>("WavelengthCutHigh");  
@@ -219,7 +224,7 @@ namespace opdet {
       fTheOpDetTree->Branch("OpChannel",          &fOpChannel,            "OpChannel/I");
       fTheOpDetTree->Branch("CountAll",       &fCountOpDetAll,      "CountAll/I");
       fTheOpDetTree->Branch("CountDetected",  &fCountOpDetDetected, "CountDetected/I");
-      if(pvs->StoreReflected())
+      if(fStoreReflected)
         fTheOpDetTree->Branch("CountReflDetected",  &fCountOpDetReflDetected, "CountReflDetected/I");
       fTheOpDetTree->Branch("Time",                   &fTime,                          "Time/F");
     }
@@ -230,7 +235,7 @@ namespace opdet {
       fTheEventTree->Branch("EventID",      &fEventID,            "EventID/I");
       fTheEventTree->Branch("CountAll",     &fCountEventAll,     "CountAll/I");
       fTheEventTree->Branch("CountDetected",&fCountEventDetected,"CountDetected/I");
-      if(pvs->StoreReflected())
+      if(fStoreReflected)
         fTheOpDetTree->Branch("CountReflDetected",  &fCountOpDetReflDetected, "CountReflDetected/I");
       
     }
@@ -280,12 +285,6 @@ namespace opdet {
   
   void SimPhotonCounter::endJob()
   {
-    art::ServiceHandle<phot::PhotonVisibilityService> vis;
-    
-    if(vis->IsBuildJob())
-    {
-      vis->StoreLibrary();
-    }
   }
   
   void SimPhotonCounter::analyze(art::Event const& evt)
@@ -414,13 +413,13 @@ namespace opdet {
                 {
                   if(fMakeDetectedPhotonsTree) fThePhotonTreeDetected->Fill();
                   //only store direct direct light
-                  if(!pvs->StoreReflected() || (pvs->StoreReflected() && fWavelength <200 )) 
+                  if(!fStoreReflected || (fStoreReflected && fWavelength <200 )) 
                     fCountOpDetDetected++;
                   // reflected and shifted light is in visible range
-                  else if(pvs->StoreReflected() && fWavelength >380 ) {
+                  else if(fStoreReflected && fWavelength >380 ) {
                     fCountOpDetReflDetected++;
                     // find the first visible arrival time 
-                    if(pvs->StoreReflT0() && fTime < fT0_vis)
+                    if(fStoreReflT0 && fTime < fT0_vis)
                       fT0_vis = fTime;  
                   }
                   
@@ -455,32 +454,17 @@ namespace opdet {
                 {
                   if(fMakeDetectedPhotonsTree) fThePhotonTreeDetected->Fill();
                   //only store direct/UV light
-                  if(!pvs->StoreReflected() || (pvs->StoreReflected() && fWavelength <200 ))
+                  if(!fStoreReflected || (fStoreReflected && fWavelength <200 ))
                     fCountOpDetDetected++;
                   //shifted light is in visible range 
-                  else if(pvs->StoreReflected() && fWavelength >380 ) { 
+                  else if(fStoreReflected && fWavelength >380 ) {
                     fCountOpDetReflDetected++;
                     // find the first visible arrival time
-                    if(pvs->StoreReflT0() && fTime < fT0_vis )
+                    if(fStoreReflT0 && fTime < fT0_vis )
                       fT0_vis= fTime;
                   }
                 }
               }
-            }
-            
-            // If this is a library building job, fill relevant entry
-            art::ServiceHandle<phot::PhotonVisibilityService> pvs;
-            if(pvs->IsBuildJob())
-            {
-              int VoxID; double NProd;
-              pvs->RetrieveLightProd(VoxID, NProd);
-              pvs->SetLibraryEntry(VoxID, fOpChannel, double(fCountOpDetDetected)/NProd);
-              //store reflected light
-              if(pvs->StoreReflected())
-                pvs->SetLibraryEntry(VoxID, fOpChannel, double(fCountOpDetReflDetected)/NProd,true);
-              //store reflected first arrival time 
-              if(pvs->StoreReflT0())
-                pvs->SetLibraryReflT0Entry(VoxID, fOpChannel, fT0_vis);
             }
             
             // Incremenent per event and fill Per OpDet trees      

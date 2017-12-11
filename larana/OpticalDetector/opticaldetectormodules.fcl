@@ -242,6 +242,8 @@ standard_simphotoncounter:
   MakeDetectedPhotonsTree: true
   MakeOpDetsTree:          true
   MakeOpDetEventsTree:     true
+  StoreReflected:          false
+  StoreReflT0:             false
 }
 
 
