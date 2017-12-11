@@ -107,12 +107,7 @@ namespace opdet {
 
       bool fStoreReflected;
       bool fStoreReflT0;
-      
-      float fQE;                     // Quantum efficiency of tube
-      
-      float fWavelengthCutLow;       // Sensitive wavelength range 
-      float fWavelengthCutHigh;      // 
-      
+            
       TVector3 initialPhotonPosition;
       TVector3 finalPhotonPosition;
       
@@ -173,9 +168,6 @@ namespace opdet {
     fMakeLightAnalysisTree=    pset.get<bool>("MakeLightAnalysisTree", false);
     fStoreReflected=           pset.get<bool>("StoreReflected", false);
     fStoreReflT0=              pset.get<bool>("StoreReflT0", false);
-    //fQE=                       pset.get<double>("QuantumEfficiency");
-    //fWavelengthCutLow=         pset.get<double>("WavelengthCutLow");
-    //fWavelengthCutHigh=        pset.get<double>("WavelengthCutHigh");  
   }
   
   
@@ -183,7 +175,6 @@ namespace opdet {
   {
     // Get file service to store trees
     art::ServiceHandle<art::TFileService> tfs;
-    art::ServiceHandle<phot::PhotonVisibilityService> pvs;
     art::ServiceHandle<geo::Geometry> geo;
     
     try { 
@@ -293,9 +284,7 @@ namespace opdet {
     // Lookup event ID from event
     art::EventNumber_t event = evt.id().event();
     fEventID=Int_t(event);
-    
-    art::ServiceHandle<phot::PhotonVisibilityService> pvs;
-    
+
     art::ServiceHandle<sim::LArG4Parameters> lgp;
     bool fUseLitePhotons = lgp->UseLitePhotons();
     
