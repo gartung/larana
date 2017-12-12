@@ -64,6 +64,7 @@ private:
     
     // For keeping track of the replacement backtracker
     std::unique_ptr<IHitParticleAssociations> fHitParticleAssociations;
+    bool                                      fOverrideRealData;      ///< if real data, tell it to run anyway (=0)
 };
 
 
@@ -77,6 +78,7 @@ void t0::MCParticleHitMatching::reconfigure(fhicl::ParameterSet const & pset)
 {
     // Get the tool for MC Truth matching
     const fhicl::ParameterSet& hitPartAssnsParams = pset.get<fhicl::ParameterSet>("HitParticleAssociations");
+    fOverrideRealData     = pset.get<bool       >("OverrideRealData", false);
     
     if (hitPartAssnsParams.get<std::string>("tool_type") == "DirectHitParticleAssns")
     {
@@ -94,7 +96,7 @@ void t0::MCParticleHitMatching::beginJob()
 
 void t0::MCParticleHitMatching::produce(art::Event & evt)
 {
-    if (evt.isRealData()) return;
+   if(evt.isRealData() && !fOverrideRealData) return;    
 
     std::unique_ptr<HitParticleAssociations> MCPartHitassn( new HitParticleAssociations);
     
