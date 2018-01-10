@@ -7,7 +7,7 @@ art_make(
 			larreco_Calorimetry
                         lardata_Utilities
                         lardataobj_RecoBase
-                        larcore_Geometry
+                        larcorealg_Geometry
                         ${ART_FRAMEWORK_CORE}
 			${ART_FRAMEWORK_PRINCIPAL}
 			${ART_FRAMEWORK_SERVICES_REGISTRY}
@@ -31,7 +31,7 @@ art_make(
 	  		larana_ParticleIdentification
             larana_TruthMatching
                         lardataobj_RecoBase
-                        larcore_Geometry
+                        larcorealg_Geometry
                         larcore_Geometry_Geometry_service
                         larreco_Calorimetry
                         lardataobj_AnalysisBase
