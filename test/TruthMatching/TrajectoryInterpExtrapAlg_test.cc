@@ -38,8 +38,8 @@ struct TrajectoryInterpExtrapAlgFixture{
   TrajectoryInterpExtrapAlgFixture() : myTrajAlg() 
   {
 
-    mf::StartMessageFacility( mf::MessageFacilityService::SingleThread,
-                                 mf::MessageFacilityService::logConsole());
+    //mf::StartMessageFacility( mf::MessageFacilityService::SingleThread,
+    //                             mf::MessageFacilityService::logConsole());
   };
   mctrue::TrajectoryInterpExtrapAlg myTrajAlg;
 

@@ -10,8 +10,8 @@ struct StartPosDirMatcherAlgFixture{
   StartPosDirMatcherAlgFixture() : matcher() 
   {
 
-    mf::StartMessageFacility( mf::MessageFacilityService::SingleThread,
-                                 mf::MessageFacilityService::logConsole());
+    //mf::StartMessageFacility( mf::MessageFacilityService::SingleThread,
+    //                             mf::MessageFacilityService::logConsole());
   };
   mctrue::StartPosDirMatcherAlg matcher;
 
