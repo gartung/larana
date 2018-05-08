@@ -40,4 +40,15 @@ standard_mcparticleshowermatching:
     HitParticleAssnLabel:     ""
 }
 
+mcparticlepfparticlematching:
+{
+    module_type:              "MCParticlePFParticleMatching"
+    MCParticleModuleLabel:    "largeant"
+    PFParticleModuleLabel:    ""
+    ClusterModuleLabel:       ""
+    HitModuleLabel:           ""
+    HitMCParticleAssnLabel:   ""
+    HitClusterAssnLabel:      ""
+    ClusterPFParticleAssnLabel: ""
+}
 END_PROLOG
