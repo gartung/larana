@@ -90,7 +90,7 @@ public:
 
 t0::MCParticlePFParticleMatching::MCParticlePFParticleMatching( fhicl::ParameterSet const & p ) {
    reconfigure( p );
-   produces< art::Assns< recob::PFParticle , simb::MCParticle, anab::BackTrackerMatchingData > > ();
+   produces< art::Assns< simb::MCParticle , recob::PFParticle, anab::BackTrackerMatchingData > > ();
 }
 
 void t0::MCParticlePFParticleMatching::reconfigure( fhicl::ParameterSet const & p ) {
@@ -191,11 +191,14 @@ void t0::MCParticlePFParticleMatching::produce( art::Event & evt ) {
 
          size_t mcpartIndex = MCPartPtr - firstParticle;
          auto const& hitPtrs = MCParticleHitAssn.at( mcpartIndex );
+         // std::cout << "HitHandle.id(): " << HitHandle.id() << std::endl;
 
          if ( hitPtrs.empty() ) continue;
 
          for ( auto const& hitPtr : hitPtrs ) {
 
+            // std::cout << "hitPtr.key(): " << hitPtr.key() << std::endl;
+            // std::cout << "hitPtr.id():  " << hitPtr.id() << std::endl;
             auto const& clusterPtrs = HitClusterAssn.at( hitPtr.key() );
             if ( clusterPtrs.empty() ) continue;
             if ( clusterPtrs.size() > 1 ) {
