@@ -67,7 +67,7 @@ public:
   void produce(art::Event & e) override;
 
   void beginJob() override;
-  void reconfigure(fhicl::ParameterSet const & p) override;
+  void reconfigure(fhicl::ParameterSet const & p) ;
   void endJob() override;
 
 
@@ -77,7 +77,7 @@ private:
 
   // Declare member data here.
 
-  int         fReadOutWindowSize;
+//  int         fReadOutWindowSize;
   float       fSamplingRate;
   std::string fClusterModuleLabel;
   int         fDetectorWidthTicks;

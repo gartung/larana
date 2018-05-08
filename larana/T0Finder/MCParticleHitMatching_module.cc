@@ -57,7 +57,7 @@ public:
 
     // Selected optional functions.
     void beginJob() override;
-    void reconfigure(fhicl::ParameterSet const & p) override;
+    void reconfigure(fhicl::ParameterSet const & p) ;
 
 private:
     
@@ -70,13 +70,13 @@ private:
 MCParticleHitMatching::MCParticleHitMatching(fhicl::ParameterSet const & pset)
 {
     reconfigure(pset);
-    produces< t0::HitParticleAssociations > ();
+    produces<HitParticleAssociations> ();
 }
 
 void MCParticleHitMatching::reconfigure(fhicl::ParameterSet const & pset)
 {
     // Get the tool for MC Truth matching
-    const fhicl::ParameterSet& hitPartAssnsParams = pset.get<fhicl::ParameterSet>("HitParticleAssociations");
+    //const fhicl::ParameterSet& hitPartAssnsParams = pset.get<fhicl::ParameterSet>("HitParticleAssociations"); // unused
     
     fOverrideRealData = pset.get<bool>("OverrideRealData", false);
 
@@ -101,4 +101,4 @@ void MCParticleHitMatching::produce(art::Event & evt)
 
 DEFINE_ART_MODULE(MCParticleHitMatching)
 } // end namespace
-    
+
