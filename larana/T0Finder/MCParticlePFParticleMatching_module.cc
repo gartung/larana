@@ -63,7 +63,7 @@ public:
   
    // Selected optional functions.
    void beginJob() override;
-   void reconfigure( fhicl::ParameterSet const & p ) override;
+   void reconfigure( fhicl::ParameterSet const & p );
 
    std::map< int, simb::MCParticle const* > mapTrackIDToMCParticle( std::vector< simb::MCParticle > const& particles ) const;
    std::vector< int > createHierarchyList( std::map< int, simb::MCParticle const* > const& TrackIDToMCParticle, int trackID ) const; 
