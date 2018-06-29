@@ -32,7 +32,7 @@
    doxygen documentation!
 */
 
-static const double kINVALID_DOUBLE = std::numeric_limits<double>::max();
+static const float kINVALID_DOUBLE = std::numeric_limits<float>::max();
 
 class TruncMean{
 
@@ -55,48 +55,48 @@ class TruncMean{
      1) the median and rms of these values is calculated.
      2) the subset of local dq values within the range [median-rms, median+rms] is selected.
      3) the resulting local truncated dq is the average of this truncated subset.
-     @input std::vector<double> rr_v -> vector of x-axis coordinates (i.e. position for track profile)
-     @input std::vector<double> dq_v -> vector of measured values for which truncated profile is requested
+     @input std::vector<float> rr_v -> vector of x-axis coordinates (i.e. position for track profile)
+     @input std::vector<float> dq_v -> vector of measured values for which truncated profile is requested
      (i.e. charge profile of a track)
-     @input std::vector<double> dq_trunc_v -> passed by reference -> output stored here
-     @input double nsigma -> optional parameter, number of sigma to keep around RMS for TM calculation
+     @input std::vector<float> dq_trunc_v -> passed by reference -> output stored here
+     @input float nsigma -> optional parameter, number of sigma to keep around RMS for TM calculation
   */
-  void CalcTruncMeanProfile(const std::vector<double>& rr_v, const std::vector<double>& dq_v,
-			    std::vector<double>& dq_trunc_v, const double& nsigma = 1);
+  void CalcTruncMeanProfile(const std::vector<float>& rr_v, const std::vector<float>& dq_v,
+			    std::vector<float>& dq_trunc_v, const float& nsigma = 1);
 
   /**
      @brief Iteratively calculate the truncated mean of a distribution
-     @input std::vector<double> v -> vector of values for which truncated mean is asked
+     @input std::vector<float> v -> vector of values for which truncated mean is asked
      @input size_t nmin -> minimum number of iterations to converge on truncated mean
      @input size_t nmax -> maximum number of iterations to converge on truncated mean
      @input size_t lmin -> minimum number of entries in vector before exiting and returning current value
      @input size_t currentiteration -> current iteration
-     @input double convergencelimit -> fractional difference between successive iterations
+     @input float convergencelimit -> fractional difference between successive iterations
      under which the iteration is completed, provided nmin iterations have occurred.
      @input nsigma -> number of sigma around the median value to keep when the distribution is trimmed.
    */
-  double CalcIterativeTruncMean(std::vector<double> v, const size_t& nmin,
+  float CalcIterativeTruncMean(std::vector<float> v, const size_t& nmin,
 			       const size_t& nmax, const size_t& currentiteration,
 			       const size_t& lmin,
-			       const double& convergencelimit,
-			       const double& nsigma, const double& oldmed = kINVALID_DOUBLE);
+			       const float& convergencelimit,
+			       const float& nsigma, const float& oldmed = kINVALID_DOUBLE);
 
   /**
      @brief Set the smearing radius over which to take hits for truncated mean computaton.
    */
-  void setRadius(const double& rad) { _rad = rad; }
+  void setRadius(const float& rad) { _rad = rad; }
 
  private:
 
-  double Mean  (const std::vector<double>& v);
-  double Median(const std::vector<double>& v);
-  double RMS   (const std::vector<double>& v);
+  float Mean  (const std::vector<float>& v);
+  float Median(const std::vector<float>& v);
+  float RMS   (const std::vector<float>& v);
 
   /**
      Smearing radius over which charge from neighboring hits is scanned to calculate local
      truncated mean
    */
-  double _rad;
+  float _rad;
 
 };
 

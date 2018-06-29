@@ -4,11 +4,11 @@
 #include "TruncMean.h"
 
 
-double TruncMean::CalcIterativeTruncMean(std::vector<double> v, const size_t& nmin,
+float TruncMean::CalcIterativeTruncMean(std::vector<float> v, const size_t& nmin,
 					const size_t& nmax, const size_t& currentiteration,
 					const size_t& lmin,
-					const double& convergencelimit,
-					const double& nsigma, const double& oldmed)
+					const float& convergencelimit,
+					const float& nsigma, const float& oldmed)
 {
 
   auto const& mean = Mean(v);
@@ -24,7 +24,7 @@ double TruncMean::CalcIterativeTruncMean(std::vector<double> v, const size_t& nm
     return mean;
 
   // if we passed the minimum number of iterations and the mean is close enough to the old value
-  double fracdiff = fabs(med-oldmed) / oldmed;
+  float fracdiff = fabs(med-oldmed) / oldmed;
   if ( (currentiteration >= nmin) && (fracdiff < convergencelimit) )
     return mean;
 
@@ -34,14 +34,14 @@ double TruncMean::CalcIterativeTruncMean(std::vector<double> v, const size_t& nm
   // use erase-remove : https://en.wikipedia.org/wiki/Erase%E2%80%93remove_idiom
   // https://stackoverflow.com/questions/17270837/stdvector-removing-elements-which-fulfill-some-conditions
   v.erase( std::remove_if( v.begin(), v.end(),
-			   [med,nsigma,rms](const double& x) { return ( (x < (med-nsigma*rms)) || (x > (med+nsigma*rms)) ); }), // lamdda condition for events to be removed
+			   [med,nsigma,rms](const float& x) { return ( (x < (med-nsigma*rms)) || (x > (med+nsigma*rms)) ); }), // lamdda condition for events to be removed
 	   v.end());
 
   return CalcIterativeTruncMean(v, nmin, nmax, lmin, currentiteration+1, convergencelimit, nsigma, med);
 }
 
-void TruncMean::CalcTruncMeanProfile(const std::vector<double>& rr_v, const std::vector<double>& dq_v,
-				     std::vector<double>& dq_trunc_v, const double& nsigma)
+void TruncMean::CalcTruncMeanProfile(const std::vector<float>& rr_v, const std::vector<float>& dq_v,
+				     std::vector<float>& dq_trunc_v, const float& nsigma)
 {
 
   // how many points to sample
@@ -55,7 +55,7 @@ void TruncMean::CalcTruncMeanProfile(const std::vector<double>& rr_v, const std:
   for (size_t n=0; n < dq_v.size(); n++) {
 
     // current residual range
-    double rr = rr_v.at(n);
+    float rr = rr_v.at(n);
 
     int nmin = n - Nneighbor;
     int nmax = n + Nneighbor;
@@ -64,11 +64,11 @@ void TruncMean::CalcTruncMeanProfile(const std::vector<double>& rr_v, const std:
     if (nmax > Nmax) nmax = Nmax;
 
     // vector for local dq values
-    std::vector<double> dq_local_v;
+    std::vector<float> dq_local_v;
 
     for (int i=nmin; i < nmax; i++) {
 
-      double dr = rr - rr_v[i];
+      float dr = rr - rr_v[i];
       if (dr < 0) dr *= -1;
 
       if (dr > _rad) continue;
@@ -83,10 +83,10 @@ void TruncMean::CalcTruncMeanProfile(const std::vector<double>& rr_v, const std:
     }
 
     // calculate median and rms
-    double median = Median(dq_local_v);
-    double rms    = RMS(dq_local_v);
+    float median = Median(dq_local_v);
+    float rms    = RMS(dq_local_v);
 
-    double truncated_dq = 0.;
+    float truncated_dq = 0.;
     int npts = 0;
     for (auto const& dq : dq_local_v) {
       if ( ( dq < (median+rms * nsigma) ) && ( dq > (median-rms * nsigma) ) ){
@@ -101,37 +101,37 @@ void TruncMean::CalcTruncMeanProfile(const std::vector<double>& rr_v, const std:
   return;
 }
 
-double TruncMean::Mean(const std::vector<double>& v)
+float TruncMean::Mean(const std::vector<float>& v)
 {
 
-  double mean = 0.;
+  float mean = 0.;
   for (auto const& n : v) mean += n;
   mean /= v.size();
 
   return mean;
 }
 
-double TruncMean::Median(const std::vector<double>& v)
+float TruncMean::Median(const std::vector<float>& v)
 {
 
   if (v.size() == 1) return v[0];
 
-  std::vector<double> vcpy = v;
+  std::vector<float> vcpy = v;
 
   std::sort(vcpy.begin(), vcpy.end());
 
-  double median = vcpy[ vcpy.size() / 2 ];
+  float median = vcpy[ vcpy.size() / 2 ];
 
   return median;
 }
 
-double TruncMean::RMS(const std::vector<double>& v)
+float TruncMean::RMS(const std::vector<float>& v)
 {
 
-  double avg = 0.;
+  float avg = 0.;
   for (auto const& val : v) avg += val;
   avg /= v.size();
-  double rms = 0.;
+  float rms = 0.;
   for (auto const& val : v) rms += (val-avg)*(val-avg);
   rms = sqrt( rms / ( v.size() -  1 ) );
 
