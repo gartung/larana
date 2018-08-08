@@ -5,6 +5,7 @@ art_make(
   nusimdata_SimulationBase
   lardataobj_AnalysisBase
   larreco_Calorimetry
+  larreco_RecoAlg
   lardata_Utilities
   lardataobj_RecoBase
   larcorealg_Geometry
@@ -19,7 +20,7 @@ art_make(
   art_Utilities
   canvas
   ${MF_MESSAGELOGGER}
-  
+  ${MF_UTILITIES}
   ${FHICLCPP}
   cetlib cetlib_except
   ${CLHEP}
@@ -32,8 +33,11 @@ art_make(
   larana_ParticleIdentification
   lardataobj_RecoBase
   larcorealg_Geometry
+  larsim_MCCheater_BackTrackerService_service
+  larsim_MCCheater_ParticleInventoryService_service
   larcore_Geometry_Geometry_service
   larreco_Calorimetry
+  larreco_RecoAlg
   lardataobj_AnalysisBase
   ${ART_FRAMEWORK_CORE}
   ${ART_FRAMEWORK_PRINCIPAL}
