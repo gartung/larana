@@ -98,7 +98,7 @@ private:
     std::string              fPFParticleProducerLabel;  ///< PFParticle producer
     std::vector<std::string> fTrackProducerLabels;      ///< Track producer
     std::vector<std::string> fAssnProducerLabels;       ///< Track to PFParticle assns producer
-
+    bool                     fOverrideRealData;
     bool                     fCopyHitMCParticleAssns;   ///< option to copy any hit/particle assns labels
     art::InputTag            fHitMCParticleAssnLabel; ///< InputTag for the hit/particle assns
   
@@ -168,6 +168,7 @@ void CRHitRemoval::reconfigure(fhicl::ParameterSet const & pset)
     fCosmicTagThresholds     = pset.get<std::vector<double> >("CosmicTagThresholds");
     fEndTickPadding          = pset.get<int>("EndTickPadding", 50);
     fMaxOutOfTime            = pset.get<int>("MaxOutOfTime",    4);
+    fOverrideRealData        = pset.get<bool>("OverrideRealData", false);
 
     fCopyHitMCParticleAssns  = pset.get<bool>("CopyHitMCParticleAssns",false);
     if(fCopyHitMCParticleAssns)
@@ -207,7 +208,7 @@ void CRHitRemoval::produce(art::Event & evt)
 {
     ++fNumEvent;
 
-    if(evt.isRealData()) fCopyHitMCParticleAssns = false;
+    if(evt.isRealData() && !fOverrideRealData) fCopyHitMCParticleAssns = false;
     fOriginalHitIndex.clear();
     
     // Start by looking up the original hits
