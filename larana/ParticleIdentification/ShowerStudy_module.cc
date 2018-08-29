@@ -91,7 +91,9 @@ namespace protoDUNE
   {
     public:
     
-      ShowerStudyAna (fhicl::ParameterSet const & pset);
+      explicit ShowerStudyAna (fhicl::ParameterSet const & pset);
+    
+      void reconfigure(fhicl::ParameterSet const & pset);
     
       void analyze ( art::Event const & evt) override;
     
@@ -139,6 +141,9 @@ namespace protoDUNE
       double t0;
       double initialE;
       double frontE;
+      double frontX;
+      double frontY;
+      double frontZ;
     
       double recombCorrection { 1.0/0.63 };
       double ADCtoGeV         { 23.6e-9 / 4.966e-3 };
@@ -189,17 +194,32 @@ namespace protoDUNE
       std::vector< std::vector<double> > spacePoints;
       std::vector< std::vector<double> > spacePointsCheat;
     
+      std::string MCModuleLabel;
+      std::string MCPartModLabel;
+      std::string emshowerLabel;
+      std::string pandoraShowerLabel;
+      std::string pandoraTrackLabel;
+      std::string pandoraShowerLabelCheat;
+      std::string HitLabel;
+      std::string PFParticleLabel;
+      std::string spacePointLabel;
+      std::string spacePointLabelCheat;
+      std::string clusterLabel;
+      std::string PFParticleLabelCheat;
+      std::string clusterLabelCheat;
+    
   }; // class ShowerStudyAna : public art::EDAnalyzer
   
 } // namespace protoDUNE
 
 //---------------------------------------------------------------------------------------------------------
 
-protoDUNE::ShowerStudyAna::ShowerStudyAna(fhicl::ParameterSet const& pset):
+protoDUNE::ShowerStudyAna::ShowerStudyAna(fhicl::ParameterSet const & pset):
   EDAnalyzer(pset),
   fShowerEnergyAlg(pset.get<fhicl::ParameterSet>("ShowerEnergyAlg")),
   fCaloAlg(pset.get<fhicl::ParameterSet>("CalorimetryAlg"))
 {
+  this->reconfigure(pset);
 } // ShowerStudyAna::ShowerStudyAna(fhicl::ParameterSet const& pset)
 
 //---------------------------------------------------------------------------------------------------------
@@ -212,6 +232,9 @@ void protoDUNE::ShowerStudyAna::beginJob()
   
   showerTree->Branch( "initialE", &initialE );
   showerTree->Branch( "frontE",   &frontE   );
+  showerTree->Branch( "frontX",   &frontX   );
+  showerTree->Branch( "frontY",   &frontY   );
+  showerTree->Branch( "frontZ",   &frontZ   );
   
   showerTree->Branch( "MCIDE",   &MCIDE   );
   
@@ -252,37 +275,32 @@ void protoDUNE::ShowerStudyAna::beginJob()
 
 //---------------------------------------------------------------------------------------------------------
 
-void protoDUNE::ShowerStudyAna::analyze( art::Event const & evt )
-{
-  // ==================================================================
+void protoDUNE::ShowerStudyAna::reconfigure(fhicl::ParameterSet const & p)
+{ // ==================================================================
   // Data labels
   // ==================================================================
+
+  MCModuleLabel           = p.get< std::string >("MCModuleLabel");            // "generator";
+  MCPartModLabel          = p.get< std::string >("MCPartModLabel");           // "largeant";
+  emshowerLabel           = p.get< std::string >("emshowerLabel");            // "emshower";
+  pandoraShowerLabel      = p.get< std::string >("pandoraShowerLabel");       // "pandoraShower";
+  pandoraTrackLabel       = p.get< std::string >("pandoraTrackLabel");        // "pandoraTrack";
+  pandoraShowerLabelCheat = p.get< std::string >("pandoraShowerLabelCheat");  // "cheatPandoraShower";
+  HitLabel                = p.get< std::string >("HitLabel");                 // "linecluster";
+  PFParticleLabel         = p.get< std::string >("PFParticleLabel");          // "pandora";
+  spacePointLabel         = p.get< std::string >("spacePointLabel");          // "pandora";
+  spacePointLabelCheat    = p.get< std::string >("spacePointLabelCheat");     // "cheatPandora";
+  clusterLabel            = p.get< std::string >("clusterLabel");             // "pandora";
+  PFParticleLabelCheat    = p.get< std::string >("PFParticleLabelCheat");     // "cheatPandora";
+  clusterLabelCheat       = p.get< std::string >("clusterLabelCheat");        // "cheatPandora";
+
+}
+
+//---------------------------------------------------------------------------------------------------------
+
+void protoDUNE::ShowerStudyAna::analyze( art::Event const & evt )
+{
   
-  std::string MCModuleLabel           = "generator";
-  std::string MCPartModLabel          = "largeant";
-  std::string emshowerLabel           = "emshower";
-  std::string pandoraShowerLabel      = "pandoraShower";
-  std::string pandoraTrackLabel       = "pandoraTrack";
-  
-  std::string pandoraShowerLabelCheat = "cheatPandoraShower";
-//  std::string pandoraShowerLabelCheat = "pandoraShower";
-  
-  std::string HitLabel                = "linecluster";
-  std::string PFParticleLabel         = "pandora";
-  std::string spacePointLabel         = "pandora";
-  
-  std::string spacePointLabelCheat    = "cheatPandora";
-//  std::string spacePointLabelCheat    = "pandora";
-  
-  std::string clusterLabel            = "pandora";
-  
-  std::string PFParticleLabelCheat    = "cheatPandora";
-//  std::string PFParticleLabelCheat    = "pandora";
-  
-  std::string clusterLabelCheat       = "cheatPandora";
-//  std::string clusterLabelCheat       = "pandora";
-  
-  std::string hitpDune                = "hitpdune";
 
   // ==================================================================
   // Clear initialised vectors
@@ -434,20 +452,26 @@ void protoDUNE::ShowerStudyAna::analyze( art::Event const & evt )
   // Find the energy at the front of the detector, Z = -0.49375
   art::ServiceHandle<geo::Geometry> geom;
   double EFF = 0;
+  double XFF = 0;
+  double YFF = 0;
+  double ZFF = 0;
   auto trajP = pPartPrimary->Trajectory();
   for ( auto it = trajP.begin() ; it != trajP.end() ; it++ ) {
     double point[3] = { it->first.X(), it->first.Y(), it->first.Z() };
     geo::TPCID idtpc = geom->FindTPCAtPosition(point);
     if ( geom->HasTPC(idtpc) ) {
       EFF = it->second.E();
-      std::cout << "Z: " << it->first.Z() << "\n";
-      
+      XFF = it->first.X();
+      YFF = it->first.Y();
+      ZFF = it->first.Z();
+      std::cout << "X: " << it->first.X() << " | Y: " << it->first.Y() << " | Z: " << it->first.Z() << "\n";
+      break;
     }
-    //if ( it->first.Z() + 0.49375 < 0.00001 ) {
-      //EFF = it->second.E();
-    //}
   }
   frontE = EFF;
+  frontX = XFF;
+  frontY = YFF;
+  frontZ = ZFF;
 //  std::cout << "G4 Initial Energy: " << g4Init << "\n"
 //            << "MC Initial Energy: " << initialE << "\n"
 //            << "Front Face Energy: " << EFF << "\n";
