@@ -41,8 +41,8 @@ standard_cosmicpfparticletagger:
     TPCXBoundary:  0
     TPCYBoundary: 20
     TPCZBoundary: 10
-    PFParticleModuleLabel: "pfparticle"
-    TrackModuleLabel:      "track"
+    PFParticleModuleLabel: "pandora"
+    TrackModuleLabel:      "pandora"
 }
 
 standard_cosmicpcaxistagger:
@@ -107,10 +107,10 @@ standard_crhitremoval:
 {
   module_type:             "CRHitRemoval"
   HitProducerLabel:        "gaushit"
-  CosmicProducerLabels:    ["pandoraCosmicKHitPFPart"]
-  PFParticleProducerLabel: "pandoraCosmic"
-  TrackProducerLabels:     ["pandoraCosmicKHit"]
-  AssnProducerLabels:      ["pandoraCosmicKHit"]
+  CosmicProducerLabels:    ["pandora"]
+  PFParticleProducerLabel: "pandora"
+  TrackProducerLabels:     ["pandora"]
+  AssnProducerLabels:      ["pandora"]
   CosmicTagThresholds:     [0.6, 0.6]
 }
 
