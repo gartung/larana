@@ -1,7 +1,8 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
 
-parent	larana	v08_00_00
+parent	larana	v08_01_00_03
+
 defaultqual	e17
 #
 fcldir product_dir job
@@ -9,9 +10,9 @@ fwdir  product_dir config_data
 #
 product         version
 
-larreco		v08_00_00
+larreco		v08_04_00_03
 
-cetbuildtools	v7_04_00	-	only_for_build
+cetbuildtools	v7_06_04	-	only_for_build
 end_product_list
 
 qualifier	larreco		notes
