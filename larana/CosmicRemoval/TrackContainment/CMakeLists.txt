@@ -6,9 +6,9 @@ art_make(
   lardataobj_RecoBase
   lardataobj_AnalysisBase
   ${FHICLCPP}
-  ${ROOT_BASIC_LIB_LIST}
+  ${ROOT_LIBRARIES}
   cetlib cetlib_except
-  ${BOOST_SYSTEM} #why the hell do I need this?
+  ${BOOST_SYSTEM_LIBRARY} #why the hell do I need this?
   )
 
 

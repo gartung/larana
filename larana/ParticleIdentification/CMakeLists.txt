@@ -1,6 +1,5 @@
 include_directories ( ${PROJECT_SOURCE_DIR} )
 art_make( 
-
   LIB_LIBRARIES
   nusimdata_SimulationBase
   lardataobj_AnalysisBase
@@ -12,20 +11,19 @@ art_make(
   ${ART_FRAMEWORK_PRINCIPAL}
   ${ART_FRAMEWORK_SERVICES_REGISTRY}
   ${ART_FRAMEWORK_SERVICES_BASIC}
-  ${ART_ROOT_IO_TFILE_SUPPORT} ${ROOT_CORE}
+  ${ART_ROOT_IO_TFILE_SUPPORT} ${ROOT_Core_LIBRARY}
   ${ART_ROOT_IO_TFILESERVICE_SERVICE}
   art_Persistency_Common
   art_Persistency_Provenance
   art_Utilities
   canvas
   ${MF_MESSAGELOGGER}
-  
   ${FHICLCPP}
   cetlib cetlib_except
-  ${CLHEP}
-  ${ROOT_BASIC_LIB_LIST}
-  ${ROOT_GEOM}
-  ${ROOT_TMVA}
+  ${CLHEP_LIBRARIES}
+  ${ROOT_LIBRARIES}
+  ${ROOT_Geom_LIBRARY}
+  ${ROOT_TMVA_LIBRARY}
   ${Boost_SYSTEM_LIBRARY}
   MODULE_LIBRARIES 
   nusimdata_SimulationBase
@@ -39,13 +37,13 @@ art_make(
   ${ART_FRAMEWORK_PRINCIPAL}
   ${ART_FRAMEWORK_SERVICES_REGISTRY}
   ${ART_FRAMEWORK_SERVICES_BASIC}
-  ${ART_ROOT_IO_TFILE_SUPPORT} ${ROOT_CORE}
+  ${ART_ROOT_IO_TFILE_SUPPORT}
+  ${ROOT_Core_LIBRARY}
   ${ART_ROOT_IO_TFILESERVICE_SERVICE}
   art_Persistency_Common
   art_Utilities
   canvas
   ${MF_MESSAGELOGGER}
-  
   ${FHICLCPP}
   cetlib cetlib_except
   )

@@ -13,21 +13,16 @@
 # ======================================================================
 
 
-# use cmake 2.8 or later
-cmake_minimum_required (VERSION 2.8)
+# use cmake 3.11 or later
+cmake_minimum_required (VERSION 3.11)
 
-project(larana)
+project(larana VERSION 08.10.03 LANGUAGES CXX)
 
-# cetbuildtools contains our cmake modules
-SET ( CETBUILDTOOLS_VERSION $ENV{CETBUILDTOOLS_VERSION} )
-IF (NOT CETBUILDTOOLS_VERSION)
-    MESSAGE (FATAL_ERROR "ERROR: setup cetbuildtools to get the cmake modules")
-ENDIF()
+set(fcl_dir job)
+set(fw_dir config_data)
+set(gdml_dir gdml)
 
-set(CMAKE_MODULE_PATH $ENV{CANVAS_ROOT_IO_DIR}/Modules
-		      $ENV{CETBUILDTOOLS_DIR}/Modules
-		      ${CMAKE_MODULE_PATH})
-
+find_package(cetmodules REQUIRED)
 include(CetCMakeEnv)
 cet_cmake_env()
 
@@ -40,21 +35,8 @@ cet_set_compiler_flags(DIAGS CAUTIOUS
 cet_report_compiler_flags()
 
 # these are minimum required versions, not the actual product versions
-find_ups_product( larcoreobj )
-find_ups_product( larcorealg )
-find_ups_product( larcore v1_00_00 )
-find_ups_product( lardataobj )
-find_ups_product( lardataalg )
-find_ups_product( lardata v1_00_00 )
-find_ups_product( larevt v1_00_00 )
-find_ups_product( larsim v1_00_00 )
-find_ups_product( larreco v1_00_00 )
-find_ups_product( nutools v1_00_00 )
-find_ups_product( art v1_09_00 )
-find_ups_product(art_root_io)
-find_ups_product( cetbuildtools v4_09_00 )
-find_ups_product( postgresql v9_1_5 )
-find_ups_product( eigen )
+find_package( larreco REQUIRED )
+
 
 # macros for dictionary and simple_plugin
 include(ArtDictionary)
@@ -66,10 +48,10 @@ add_subdirectory(larana)
 
 # tests
 add_subdirectory(test)
-
+add_subdirectory(cmakeConfig)
 # ups - table and config files
-add_subdirectory(ups)
+#add_subdirectory(ups)
 
 # packaging utility
-include(UseCPack)
+#include(UseCPack)
 

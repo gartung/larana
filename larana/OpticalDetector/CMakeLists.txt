@@ -19,7 +19,7 @@ art_make(
   ${ART_FRAMEWORK_PRINCIPAL}
   ${ART_FRAMEWORK_SERVICES_REGISTRY}
   ${ART_FRAMEWORK_SERVICES_BASIC}
-  ${ART_ROOT_IO_TFILE_SUPPORT} ${ROOT_CORE}
+  ${ART_ROOT_IO_TFILE_SUPPORT} ${ROOT_Core_LIBRARY}
   ${ART_ROOT_IO_TFILESERVICE_SERVICE}
   ${ART_FRAMEWORK_SERVICES_OPTIONAL_RANDOMNUMBERGENERATOR_SERVICE}
   art_Persistency_Common
@@ -29,7 +29,7 @@ art_make(
   ${MF_MESSAGELOGGER}
   ${FHICLCPP}
   cetlib cetlib_except
-  ${ROOT_BASIC_LIB_LIST}
+  ${ROOT_LIBRARIES}
   MODULE_LIBRARIES larana_OpticalDetector_OpDigiProperties_service
   larana_OpticalDetector_OpHitFinder
   larana_OpticalDetector
@@ -54,7 +54,7 @@ art_make(
   ${ART_FRAMEWORK_PRINCIPAL}
   ${ART_FRAMEWORK_SERVICES_REGISTRY}
   ${ART_FRAMEWORK_SERVICES_BASIC}
-  ${ART_ROOT_IO_TFILE_SUPPORT} ${ROOT_CORE}
+  ${ART_ROOT_IO_TFILE_SUPPORT} ${ROOT_Core_LIBRARY}
   ${ART_ROOT_IO_TFILESERVICE_SERVICE}
   ${ART_FRAMEWORK_SERVICES_OPTIONAL_RANDOMNUMBERGENERATOR_SERVICE}
   art_Persistency_Common
@@ -65,7 +65,7 @@ art_make(
   
   ${FHICLCPP}
   cetlib cetlib_except
-  ${ROOT_BASIC_LIB_LIST}
+  ${ROOT_LIBRARIES}
   SERVICE_LIBRARIES
   larcorealg_Geometry
   larcore_Geometry_Geometry_service
@@ -73,7 +73,7 @@ art_make(
   ${ART_FRAMEWORK_PRINCIPAL}
   ${ART_FRAMEWORK_SERVICES_REGISTRY}
   ${ART_FRAMEWORK_SERVICES_BASIC}
-  ${ART_ROOT_IO_TFILE_SUPPORT} ${ROOT_CORE}
+  ${ART_ROOT_IO_TFILE_SUPPORT} ${ROOT_Core_LIBRARY}
   ${ART_ROOT_IO_TFILESERVICE_SERVICE}
   art_Persistency_Common
   art_Persistency_Provenance
@@ -83,8 +83,8 @@ art_make(
   
   ${FHICLCPP}
   cetlib cetlib_except
-  ${CLHEP}
-  ${ROOT_BASIC_LIB_LIST}
+  ${CLHEP_LIBRARIES}
+  ${ROOT_LIBRARIES}
   )
 
 install_headers()
