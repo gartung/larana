@@ -11,6 +11,8 @@
 #include <string>
 #include <bitset>
 
+#include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
+
 #include "fhiclcpp/fwd.h"
 #include "canvas/Persistency/Common/Ptr.h"
 
