@@ -8,13 +8,14 @@ art_make(
     art_Utilities
     ${FHICLCPP}
     ${MF_MESSAGELOGGER}
-    ${ROOT_CORE}
-    ${ROOT_HIST}
-    ${ROOT_MATHCORE}
-    ${ROOT_PHYSICS}
-    ${ROOT_RIO}
-    ${ROOT_TMVA}
-    ${ROOT_TREE}
+    ${CLHEP_LIBRARIES}
+    ROOT::Core
+    ROOT::Hist
+    ROOT::MathCore
+    ROOT::Physics
+    ROOT::RIO
+    ROOT::TMVA
+    ROOT::Tree
     canvas
     cetlib
     cetlib_except
@@ -28,6 +29,5 @@ art_make(
 
 install_headers()
 install_fhicl()
-install_source()
 
 add_subdirectory(scripts)

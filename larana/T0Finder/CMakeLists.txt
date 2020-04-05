@@ -6,10 +6,10 @@ art_make(
     ${ART_ROOT_IO_TFILESERVICE_SERVICE}
     ${ART_ROOT_IO_TFILE_SUPPORT}
     ${MF_MESSAGELOGGER}
-    ${ROOT_CORE}
-    ${ROOT_HIST}
-    ${ROOT_PHYSICS}
-    ${ROOT_TREE}
+    ROOT::Core
+    ROOT::Hist
+    ROOT::Physics
+    ROOT::Tree
     larcorealg_Geometry
     lardataobj_AnalysisBase
     lardataobj_RecoBase
@@ -20,5 +20,4 @@ art_make(
 
 install_headers()
 install_fhicl()
-install_source()
 install_scripts()
